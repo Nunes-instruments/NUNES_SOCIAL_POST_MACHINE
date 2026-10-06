@@ -85,12 +85,30 @@ export async function GET(request, { params }) {
       return NextResponse.redirect(new URL(`/connect/${config.label}?error=token-exchange`, publicOrigin(request)));
     }
 
+    let author_urn = null;
+    let profile = null;
+
+    if (id === "linkedin") {
+      try {
+        const ur = await fetch("https://api.linkedin.com/v2/userinfo", {
+          headers: { Authorization: `Bearer ${data.access_token}` },
+          cache: "no-store"
+        });
+        if (ur.ok) {
+          profile = await ur.json();
+          if (profile?.sub) author_urn = `urn:li:person:${profile.sub}`;
+        }
+      } catch {}
+    }
+
     const payload = {
       platform: config.label,
       access_token: data.access_token,
       refresh_token: data.refresh_token || null,
       expires_in: data.expires_in || null,
       scope: data.scope || config.scope,
+      author_urn,
+      profile: profile ? { sub: profile.sub || null, name: profile.name || null } : null,
       createdAt: Date.now()
     };
 
