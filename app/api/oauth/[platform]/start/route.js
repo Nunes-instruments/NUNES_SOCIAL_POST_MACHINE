@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
-import { OAUTH, envReady } from "../../../../lib/oauth-config";
+import { OAUTH } from "../../../../lib/oauth-config";
+import { readConfig } from "../../../../lib/oauth-store";
 
 function b64url(buf) {
   return Buffer.from(buf).toString("base64url");
@@ -15,7 +16,9 @@ export async function GET(request, { params }) {
     return NextResponse.redirect(new URL(`/connect/${platform}?error=unsupported`, request.url));
   }
 
-  if (!envReady(id)) {
+  const saved=readConfig(request.cookies,id);
+  const clientId=saved?.clientId || process.env[config.clientId];
+  if (!clientId) {
     return NextResponse.redirect(new URL(`/connect/${config.label}?error=app-not-configured`, request.url));
   }
 
@@ -24,7 +27,7 @@ export async function GET(request, { params }) {
   const state = b64url(crypto.randomBytes(24));
   const url = new URL(config.auth);
 
-  url.searchParams.set(config.clientKey, process.env[config.clientId]);
+  url.searchParams.set(config.clientKey, clientId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", config.scope);
