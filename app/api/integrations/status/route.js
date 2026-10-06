@@ -1,13 +1,13 @@
 import { cookies } from "next/headers";
 import { OAUTH, envReady } from "../../../lib/oauth-config";
-import { cookieName, unseal, readConfig } from "../../../lib/oauth-store";
+import { cookieName, unseal, readConfig, secretFromJar } from "../../../lib/oauth-store";
 
 export async function GET() {
   const jar = await cookies();
   const integrations = {};
 
   for (const [id, cfg] of Object.entries(OAUTH)) {
-    const token = unseal(jar.get(cookieName(cfg.label))?.value);
+    const token = unseal(jar.get(cookieName(cfg.label))?.value, secretFromJar(jar));
     const saved = readConfig(jar,id);
     const configured = envReady(id) || Boolean(saved?.clientId && saved?.clientSecret);
     integrations[cfg.label] = {
@@ -25,5 +25,5 @@ export async function GET() {
       : "manual-login-available"
   };
 
-  return Response.json({ ok: true, n8nRequired: false, secureStorageReady: Boolean(process.env.OAUTH_SESSION_SECRET), integrations });
+  return Response.json({ ok: true, n8nRequired: false, secureStorageReady: true, secureStorageMode: "browser-encrypted", integrations });
 }
