@@ -9,6 +9,7 @@ import {
   seal,
   secretFromJar
 } from "../../../lib/oauth-store";
+import { getSharedState, setSharedState } from "../../../lib/shared-state";
 
 const ALLOWED = new Set(["linkedin","facebook","instagram","threads","x","pinterest","tiktok","youtube"]);
 
@@ -16,7 +17,7 @@ export async function GET(request){
   const url=new URL(request.url);
   const id=String(url.searchParams.get("platform")||"").toLowerCase();
   if(!ALLOWED.has(id)) return Response.json({ok:false,error:"Unsupported platform"},{status:400});
-  const saved=readConfig(request.cookies,id);
+  const saved=(await getSharedState(`config:${id}`)) || readConfig(request.cookies,id);
   return Response.json({
     ok:true,
     configured:Boolean(saved?.clientId&&saved?.clientSecret),
@@ -49,6 +50,7 @@ export async function POST(request){
     }
 
     const payload={platform:id,clientId,clientSecret,accountId,secondaryId,savedAt:Date.now()};
+    await setSharedState(`config:${id}`,payload);
     response.cookies.set(configCookieName(id),seal(payload,secret),COOKIE_OPTIONS);
     return response;
   }catch(e){
