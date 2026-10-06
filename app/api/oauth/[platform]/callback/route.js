@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { OAUTH } from "../../../../lib/oauth-config";
 import { seal, cookieName, COOKIE_OPTIONS, readConfig, secretFromJar } from "../../../../lib/oauth-store";
+import { getSharedState, setSharedState } from "../../../../lib/shared-state";
 
 function publicOrigin(request) {
   if (process.env.PUBLIC_APP_URL) return process.env.PUBLIC_APP_URL.replace(/\/$/, "");
@@ -15,7 +16,7 @@ export async function GET(request, { params }) {
   const config = OAUTH[id];
   const url = new URL(request.url);
 
-  const saved=readConfig(request.cookies,id);
+  const saved=(await getSharedState(`config:${id}`)) || readConfig(request.cookies,id);
   const clientId=saved?.clientId || (config ? process.env[config.clientId] : null);
   const clientSecret=saved?.clientSecret || (config ? process.env[config.clientSecret] : null);
   if (!config || !clientId || !clientSecret) {
@@ -115,6 +116,7 @@ export async function GET(request, { params }) {
     const response = NextResponse.redirect(new URL(`/connect/${config.label}?connected=1`, publicOrigin(request)));
     const secret = secretFromJar(request.cookies);
     if (!secret) return NextResponse.redirect(new URL(`/connect/${config.label}?error=secure-session-missing`, publicOrigin(request)));
+    await setSharedState(`token:${id}`,payload);
     response.cookies.set(cookieName(config.label), seal(payload, secret), COOKIE_OPTIONS);
     response.cookies.delete(`nunes_state_${id}`);
     response.cookies.delete(`nunes_pkce_${id}`);
