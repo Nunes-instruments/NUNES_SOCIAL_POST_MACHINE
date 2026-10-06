@@ -3,6 +3,7 @@ import { OAUTH } from "../../../../lib/oauth-config";
 import { seal, cookieName, COOKIE_OPTIONS, readConfig, secretFromJar } from "../../../../lib/oauth-store";
 
 function publicOrigin(request) {
+  if (process.env.PUBLIC_APP_URL) return process.env.PUBLIC_APP_URL.replace(/\/$/, "");
   const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
   const proto = request.headers.get("x-forwarded-proto") || "https";
   return host ? `${proto}://${host}` : new URL(request.url).origin;
