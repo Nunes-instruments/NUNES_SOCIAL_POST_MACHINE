@@ -43,7 +43,7 @@ export default function ConnectPlatform() {
   const qs = useSearchParams();
   const platform = decodeURIComponent(String(params.platform || ""));
   const [state, setState] = useState(null);
-  const [secureReady,setSecureReady]=useState(false);
+  const [secureReady,setSecureReady]=useState(true);
   const [clientId,setClientId]=useState("");
   const [clientSecret,setClientSecret]=useState("");
   const [accountId,setAccountId]=useState("");
@@ -53,7 +53,7 @@ export default function ConnectPlatform() {
     const r = await fetch("/api/integrations/status", { cache: "no-store" });
     const j = await r.json();
     setState(j.integrations?.[platform] || null);
-    setSecureReady(Boolean(j.secureStorageReady));
+    setSecureReady(j.secureStorageReady !== false);
   }
 
   useEffect(() => { refresh(); }, [platform]);
@@ -70,8 +70,9 @@ export default function ConnectPlatform() {
     const j=await r.json().catch(()=>({}));
     if(j.ok){
       setClientSecret("");
-      setSaveMsg("Saved. You can connect this account now.");
-      await refresh();
+      setSaveMsg("Saved. Opening secure authorization...");
+      window.location.href=j.connectUrl || `/api/oauth/${platform.toLowerCase()}/start`;
+      return;
     }else{
       setSaveMsg(j.error||"Unable to save API setup");
     }
@@ -120,17 +121,13 @@ export default function ConnectPlatform() {
                 <div className="warning"><strong>API setup required</strong><span>Paste the Client ID and Client Secret below, save them, then connect securely.</span></div>
               )}
 
-              {platform !== "Bluesky" && !secureReady && (
-                <div className="warning"><strong>One-time security key required</strong><span>Add OAUTH_SESSION_SECRET once in Vercel Environment Variables. After that, all social API credentials can be entered here in the app.</span></div>
-              )}
-
-              {platform !== "Bluesky" && (
+                            {platform !== "Bluesky" && (
                 <form className="apiSetupForm" onSubmit={saveApiSetup}>
                   <h3>API Setup</h3>
                   <label>Client ID / App ID<input value={clientId} onChange={e=>setClientId(e.target.value)} placeholder="Paste Client ID / App ID" required /></label>
                   <label>Client Secret / App Secret<input type="password" value={clientSecret} onChange={e=>setClientSecret(e.target.value)} placeholder="Paste Client Secret / App Secret" required /></label>
                   {field && <label>{field.accountLabel}<input value={accountId} onChange={e=>setAccountId(e.target.value)} placeholder={field.accountPlaceholder} /></label>}
-                  <button className="primary wideBtn" type="submit" disabled={!secureReady}>Save API Setup</button>
+                  <button className="primary wideBtn" type="submit">Save & Connect Now</button>
                   {saveMsg && <div className="saveMsg">{saveMsg}</div>}
                 </form>
               )}
