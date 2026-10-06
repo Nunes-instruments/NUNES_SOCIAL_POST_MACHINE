@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const PLATFORMS = [
   ["LinkedIn","in","80–140 words","Professional, conversational"],
@@ -74,6 +74,11 @@ export default function Home(){
   const [results,setResults]=useState([]);
   const [search,setSearch]=useState("");
   const [timeframe,setTimeframe]=useState("7 Days");
+  const [attachments,setAttachments]=useState([]);
+  const [uploading,setUploading]=useState(false);
+  const [uploadError,setUploadError]=useState("");
+  const fileInputRef=useRef(null);
+  const imageInputRef=useRef(null);
 
   async function refreshConnections(){
     try{
@@ -103,6 +108,57 @@ export default function Home(){
     setTab("Dashboard");
   }
 
+  function formatFileSize(bytes){
+    if(bytes < 1024) return bytes+" B";
+    if(bytes < 1024*1024) return (bytes/1024).toFixed(1)+" KB";
+    return (bytes/(1024*1024)).toFixed(1)+" MB";
+  }
+
+  async function uploadFiles(fileList){
+    const files=Array.from(fileList||[]);
+    if(!files.length) return;
+    setUploading(true);
+    setUploadError("");
+    try{
+      for(const file of files){
+        const form=new FormData();
+        form.set("file",file,file.name||"pasted-file");
+        const r=await fetch("/api/upload",{method:"POST",body:form});
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok || !j.ok) throw new Error(j.error||`Upload failed: ${file.name}`);
+        const uploaded=j.file;
+        setAttachments(prev=>[...prev,uploaded]);
+        if(!mediaUrl && /^image\//.test(uploaded.type||"") || (!mediaUrl && /^video\//.test(uploaded.type||""))){
+          setMediaUrl(uploaded.url);
+        }
+      }
+    }catch(e){
+      setUploadError(e.message||"Upload failed");
+    }finally{
+      setUploading(false);
+    }
+  }
+
+  function handlePaste(e){
+    const files=Array.from(e.clipboardData?.files||[]);
+    if(files.length){
+      e.preventDefault();
+      uploadFiles(files);
+    }
+  }
+
+  function removeAttachment(index){
+    setAttachments(prev=>{
+      const removed=prev[index];
+      const next=prev.filter((_,i)=>i!==index);
+      if(removed?.url===mediaUrl){
+        const nextMedia=next.find(x=>/^image\//.test(x.type||"")||/^video\//.test(x.type||""));
+        setMediaUrl(nextMedia?.url||"");
+      }
+      return next;
+    });
+  }
+
   function shareWhatsApp(){
     const message=[
       topic || "Nunes Instruments",
@@ -124,7 +180,7 @@ export default function Home(){
     for(const platform of selected){
       if(!drafts[platform]) continue;
       try{
-        const r=await fetch("/api/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,channel:platform,text:drafts[platform],mediaUrl,angle})});
+        const r=await fetch("/api/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,channel:platform,text:drafts[platform],mediaUrl,angle,attachments})});
         const j=await r.json();
         rr.push({platform,status:j.external?.status||(j.ok?"ARCHIVED":"FAILED"),error:j.external?.error||null});
       }catch{rr.push({platform,status:"FAILED"})}
@@ -219,7 +275,57 @@ export default function Home(){
                   <label>Key message / context<textarea value={brief} onChange={e=>setBrief(e.target.value)} placeholder="Add facts, offer, application, event or message."/></label>
                   <label>Content angle<select value={angle} onChange={e=>setAngle(e.target.value)}>{ANGLES.map(x=><option key={x}>{x}</option>)}</select></label>
                   <label>CTA<input value={cta} onChange={e=>setCta(e.target.value)} placeholder="Example: Send us your application and quantity"/></label>
-                  <label>Media URL (optional)<input value={mediaUrl} onChange={e=>setMediaUrl(e.target.value)} placeholder="Public image/video URL"/></label>
+
+                  <div className="attachmentManager">
+                    <div className="attachmentHead">
+                      <div><strong>Images & files</strong><span>Paste an image, drag files here, or upload Excel/PDF/Word/ZIP and other files.</span></div>
+                      <span>{attachments.length} attached</span>
+                    </div>
+
+                    <div
+                      className={`pasteDropZone ${uploading?"uploading":""}`}
+                      tabIndex="0"
+                      onPaste={handlePaste}
+                      onDragOver={e=>{e.preventDefault();e.currentTarget.classList.add("dragging")}}
+                      onDragLeave={e=>e.currentTarget.classList.remove("dragging")}
+                      onDrop={e=>{e.preventDefault();e.currentTarget.classList.remove("dragging");uploadFiles(e.dataTransfer.files)}}
+                    >
+                      <div className="dropIcon">＋</div>
+                      <div>
+                        <strong>{uploading?"Uploading...":"Paste or drop files here"}</strong>
+                        <span>Ctrl+V for screenshots/images · Max 50 MB per file</span>
+                      </div>
+                      <div className="uploadActions">
+                        <button type="button" onClick={()=>imageInputRef.current?.click()}>Upload Image</button>
+                        <button type="button" onClick={()=>fileInputRef.current?.click()}>Upload File</button>
+                      </div>
+                      <input ref={imageInputRef} type="file" accept="image/*,video/*" multiple hidden onChange={e=>{uploadFiles(e.target.files);e.target.value=""}}/>
+                      <input ref={fileInputRef} type="file" multiple hidden onChange={e=>{uploadFiles(e.target.files);e.target.value=""}}/>
+                    </div>
+
+                    {uploadError && <div className="uploadError">{uploadError}</div>}
+
+                    {attachments.length>0 && <div className="attachmentList">
+                      {attachments.map((file,index)=>{
+                        const isImage=/^image\//.test(file.type||"");
+                        return <div className="attachmentItem" key={file.url+index}>
+                          <div className="attachmentPreview">
+                            {isImage?<img src={file.url} alt={file.name}/>:<span>{(file.name.split(".").pop()||"FILE").toUpperCase().slice(0,5)}</span>}
+                          </div>
+                          <div className="attachmentInfo">
+                            <strong title={file.name}>{file.name}</strong>
+                            <span>{formatFileSize(file.size||0)} · {file.type||"File"}</span>
+                            <a href={file.url} target="_blank" rel="noreferrer">Open shared file</a>
+                          </div>
+                          <button type="button" className="removeAttachment" onClick={()=>removeAttachment(index)}>×</button>
+                        </div>
+                      })}
+                    </div>}
+
+                    <label className="advancedMediaUrl">Media URL (auto-filled for the first uploaded image/video)
+                      <input value={mediaUrl} onChange={e=>setMediaUrl(e.target.value)} placeholder="Public image/video URL"/>
+                    </label>
+                  </div>
                 </article>
                 <article className="panel socialPublishPanel">
                   <div className="panelHead">
