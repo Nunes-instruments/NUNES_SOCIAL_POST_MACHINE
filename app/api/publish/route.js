@@ -34,8 +34,21 @@ async function archive(body, external) {
 
 async function postLinkedIn(body, token, config) {
   if (!token?.access_token) return { status: "NOT_CONNECTED" };
-  const author = config?.accountId || token?.author_urn || process.env.LINKEDIN_AUTHOR_URN;
-  if (!author) return { status: "ACCOUNT_ID_REQUIRED", error: "Set LINKEDIN_AUTHOR_URN." };
+
+  const grantedScopes = String(token?.scope || "").split(/[\s,]+/).filter(Boolean);
+  const hasOrgPosting = grantedScopes.includes("w_organization_social") || grantedScopes.includes("rw_organization_admin");
+
+  const configuredAuthor = config?.accountId || process.env.LINKEDIN_AUTHOR_URN || null;
+  const wantsOrganization = String(configuredAuthor || "").startsWith("urn:li:organization:");
+
+  const author = wantsOrganization && hasOrgPosting
+    ? configuredAuthor
+    : (token?.author_urn || configuredAuthor);
+
+  if (!author) return {
+    status: "ACCOUNT_ID_REQUIRED",
+    error: "Reconnect LinkedIn once so NUNES can detect your personal author identity."
+  };
 
   const r = await fetch("https://api.linkedin.com/rest/posts", {
     method: "POST",
@@ -56,10 +69,41 @@ async function postLinkedIn(body, token, config) {
   });
 
   const text = await r.text();
+
+  if (!r.ok && wantsOrganization && !hasOrgPosting && token?.author_urn) {
+    const retry = await fetch("https://api.linkedin.com/rest/posts", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token.access_token}`,
+        "Content-Type": "application/json",
+        "X-Restli-Protocol-Version": "2.0.0",
+        "Linkedin-Version": "202606"
+      },
+      body: JSON.stringify({
+        author: token.author_urn,
+        commentary: body.text,
+        visibility: "PUBLIC",
+        distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
+        lifecycleState: "PUBLISHED",
+        isReshareDisabledByAuthor: false
+      })
+    });
+    const retryText = await retry.text();
+    return {
+      status: retry.ok ? "POSTED" : "FAILED",
+      httpStatus: retry.status,
+      externalId: retry.headers.get("x-restli-id") || null,
+      fallbackUsed: true,
+      authorUsed: token.author_urn,
+      error: retry.ok ? null : retryText.slice(0, 800)
+    };
+  }
+
   return {
     status: r.ok ? "POSTED" : "FAILED",
     httpStatus: r.status,
     externalId: r.headers.get("x-restli-id") || null,
+    authorUsed: author,
     error: r.ok ? null : text.slice(0, 800)
   };
 }
