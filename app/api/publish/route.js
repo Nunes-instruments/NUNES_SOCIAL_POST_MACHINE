@@ -185,6 +185,184 @@ async function postBluesky(body) {
   };
 }
 
+
+async function postInstagram(body, token, config) {
+  if (!token?.access_token) return { status: "NOT_CONNECTED" };
+  if (!body.mediaUrl) return { status: "MEDIA_REQUIRED", error: "Instagram requires a public image/video URL." };
+
+  let igUserId = config?.accountId || process.env.INSTAGRAM_USER_ID || null;
+  let accessToken = token.access_token;
+
+  if (!igUserId) {
+    const pages = await fetch("https://graph.facebook.com/v24.0/me/accounts?fields=id,access_token,instagram_business_account&access_token=" + encodeURIComponent(token.access_token), { cache:"no-store" });
+    const pj = await pages.json().catch(()=>({}));
+    const page = (pj.data || []).find(x => x.instagram_business_account?.id);
+    if (page) {
+      igUserId = page.instagram_business_account.id;
+      accessToken = page.access_token || accessToken;
+    }
+  }
+
+  if (!igUserId) return { status:"ACCOUNT_ID_REQUIRED", error:"Connect an Instagram Professional account to a Facebook Page, or enter the Instagram User ID in API Setup." };
+
+  const isVideo = /\.(mp4|mov|m4v|webm)(\?|$)/i.test(body.mediaUrl);
+  const create = new URLSearchParams({
+    access_token: accessToken,
+    caption: body.text || ""
+  });
+  if (isVideo) {
+    create.set("media_type","REELS");
+    create.set("video_url",body.mediaUrl);
+  } else {
+    create.set("image_url",body.mediaUrl);
+  }
+
+  const r1 = await fetch(`https://graph.facebook.com/v24.0/${igUserId}/media`, {
+    method:"POST",
+    headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:create
+  });
+  const j1 = await r1.json().catch(()=>({}));
+  if (!r1.ok || !j1.id) return { status:"FAILED", httpStatus:r1.status, error:JSON.stringify(j1).slice(0,800) };
+
+  if (isVideo) {
+    // Give Meta a short time to process a small demo video before publish.
+    await new Promise(r=>setTimeout(r,2500));
+  }
+
+  const publish = new URLSearchParams({ creation_id:j1.id, access_token:accessToken });
+  const r2 = await fetch(`https://graph.facebook.com/v24.0/${igUserId}/media_publish`, {
+    method:"POST",
+    headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:publish
+  });
+  const j2 = await r2.json().catch(()=>({}));
+  return { status:r2.ok?"POSTED":"FAILED", httpStatus:r2.status, externalId:j2.id||null, error:r2.ok?null:JSON.stringify(j2).slice(0,800) };
+}
+
+async function postThreads(body, token, config) {
+  if (!token?.access_token) return { status:"NOT_CONNECTED" };
+  let userId = config?.accountId || null;
+  if (!userId) {
+    const me = await fetch("https://graph.threads.net/v1.0/me?fields=id,username&access_token=" + encodeURIComponent(token.access_token), {cache:"no-store"});
+    const mj = await me.json().catch(()=>({}));
+    if (me.ok) userId = mj.id;
+  }
+  if (!userId) return { status:"ACCOUNT_ID_REQUIRED", error:"Threads user ID could not be detected. Reconnect Threads or enter the User ID in API Setup." };
+
+  const createBody = new URLSearchParams({
+    media_type:"TEXT",
+    text:body.text || "",
+    access_token:token.access_token
+  });
+  const r1=await fetch(`https://graph.threads.net/v1.0/${userId}/threads`,{
+    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:createBody
+  });
+  const j1=await r1.json().catch(()=>({}));
+  if(!r1.ok||!j1.id) return {status:"FAILED",httpStatus:r1.status,error:JSON.stringify(j1).slice(0,800)};
+
+  const pubBody=new URLSearchParams({creation_id:j1.id,access_token:token.access_token});
+  const r2=await fetch(`https://graph.threads.net/v1.0/${userId}/threads_publish`,{
+    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:pubBody
+  });
+  const j2=await r2.json().catch(()=>({}));
+  return {status:r2.ok?"POSTED":"FAILED",httpStatus:r2.status,externalId:j2.id||null,error:r2.ok?null:JSON.stringify(j2).slice(0,800)};
+}
+
+async function postPinterest(body, token, config) {
+  if (!token?.access_token) return { status:"NOT_CONNECTED" };
+  const boardId = config?.accountId || process.env.PINTEREST_BOARD_ID;
+  if (!boardId) return {status:"ACCOUNT_ID_REQUIRED",error:"Enter the Pinterest Board ID in API Setup."};
+  if (!body.mediaUrl) return {status:"MEDIA_REQUIRED",error:"Pinterest requires a public image URL."};
+
+  const r=await fetch("https://api.pinterest.com/v5/pins",{
+    method:"POST",
+    headers:{Authorization:`Bearer ${token.access_token}`,"Content-Type":"application/json"},
+    body:JSON.stringify({
+      board_id:boardId,
+      title:String(body.topic||"Nunes Instruments").slice(0,100),
+      description:String(body.text||"").slice(0,500),
+      media_source:{source_type:"image_url",url:body.mediaUrl}
+    })
+  });
+  const j=await r.json().catch(()=>({}));
+  return {status:r.ok?"POSTED":"FAILED",httpStatus:r.status,externalId:j.id||null,error:r.ok?null:JSON.stringify(j).slice(0,800)};
+}
+
+async function postTikTok(body, token) {
+  if (!token?.access_token) return {status:"NOT_CONNECTED"};
+  if (!body.mediaUrl) return {status:"MEDIA_REQUIRED",error:"TikTok requires a public image/video URL."};
+
+  const info=await fetch("https://open.tiktokapis.com/v2/post/publish/creator_info/query/",{
+    method:"POST",headers:{Authorization:`Bearer ${token.access_token}`,"Content-Type":"application/json; charset=UTF-8"}
+  });
+  const ij=await info.json().catch(()=>({}));
+  if(!info.ok || ij?.error?.code!=="ok") return {status:"FAILED",httpStatus:info.status,error:JSON.stringify(ij).slice(0,800)};
+  const options=ij?.data?.privacy_level_options||[];
+  const privacy=options.includes("SELF_ONLY")?"SELF_ONLY":options[0];
+  if(!privacy) return {status:"FAILED",error:"TikTok did not return an allowed privacy level."};
+
+  const isVideo=/\.(mp4|mov|m4v|webm)(\?|$)/i.test(body.mediaUrl);
+  const endpoint=isVideo
+    ?"https://open.tiktokapis.com/v2/post/publish/video/init/"
+    :"https://open.tiktokapis.com/v2/post/publish/content/init/";
+
+  const payload=isVideo ? {
+    post_info:{title:String(body.text||"").slice(0,2200),privacy_level:privacy,disable_comment:false,disable_duet:false,disable_stitch:false},
+    source_info:{source:"PULL_FROM_URL",video_url:body.mediaUrl}
+  } : {
+    post_info:{title:String(body.topic||"Nunes Instruments").slice(0,90),description:String(body.text||"").slice(0,2200),privacy_level:privacy,disable_comment:false,auto_add_music:false},
+    source_info:{source:"PULL_FROM_URL",photo_images:[body.mediaUrl],photo_cover_index:0},
+    post_mode:"DIRECT_POST",
+    media_type:"PHOTO"
+  };
+
+  const r=await fetch(endpoint,{
+    method:"POST",headers:{Authorization:`Bearer ${token.access_token}`,"Content-Type":"application/json; charset=UTF-8"},
+    body:JSON.stringify(payload)
+  });
+  const j=await r.json().catch(()=>({}));
+  const ok=r.ok && j?.error?.code==="ok";
+  return {status:ok?"POSTED":"FAILED",httpStatus:r.status,externalId:j?.data?.publish_id||null,error:ok?null:JSON.stringify(j).slice(0,800)};
+}
+
+async function postYouTube(body, token) {
+  if (!token?.access_token) return {status:"NOT_CONNECTED"};
+  if (!body.mediaUrl) return {status:"MEDIA_REQUIRED",error:"YouTube requires a public video URL."};
+
+  const source=await fetch(body.mediaUrl);
+  if(!source.ok) return {status:"FAILED",error:"Could not download the video from the supplied Media URL."};
+  const contentType=source.headers.get("content-type")||"video/mp4";
+  if(!contentType.startsWith("video/")) return {status:"MEDIA_REQUIRED",error:"YouTube Media URL must point to a video file."};
+  const buffer=Buffer.from(await source.arrayBuffer());
+
+  const metadata={
+    snippet:{
+      title:String(body.topic||"Nunes Instruments").slice(0,100),
+      description:String(body.text||"").slice(0,5000)
+    },
+    status:{privacyStatus:"private"}
+  };
+
+  const init=await fetch("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",{
+    method:"POST",
+    headers:{
+      Authorization:`Bearer ${token.access_token}`,
+      "Content-Type":"application/json; charset=UTF-8",
+      "X-Upload-Content-Length":String(buffer.length),
+      "X-Upload-Content-Type":contentType
+    },
+    body:JSON.stringify(metadata)
+  });
+  if(!init.ok) return {status:"FAILED",httpStatus:init.status,error:(await init.text()).slice(0,800)};
+  const location=init.headers.get("location");
+  if(!location) return {status:"FAILED",error:"YouTube did not return an upload URL."};
+
+  const up=await fetch(location,{method:"PUT",headers:{"Content-Type":contentType,"Content-Length":String(buffer.length)},body:buffer});
+  const j=await up.json().catch(()=>({}));
+  return {status:up.ok?"POSTED":"FAILED",httpStatus:up.status,externalId:j.id||null,error:up.ok?null:JSON.stringify(j).slice(0,800)};
+}
+
 async function externalPublish(body) {
   if (body.channel === "Bluesky") return postBluesky(body);
 
@@ -195,17 +373,14 @@ async function externalPublish(body) {
   if (body.channel === "LinkedIn") return postLinkedIn(body, token, cfg);
   if (body.channel === "X") return postX(body, token);
   if (body.channel === "Facebook") return postFacebook(body, token, cfg);
+  if (body.channel === "Instagram") return postInstagram(body, token, cfg);
+  if (body.channel === "Threads") return postThreads(body, token, cfg);
+  if (body.channel === "Pinterest") return postPinterest(body, token, cfg);
+  if (body.channel === "TikTok") return postTikTok(body, token);
+  if (body.channel === "YouTube") return postYouTube(body, token);
 
   if (!token?.access_token) return { status: "NOT_CONNECTED" };
-
-  if (body.channel === "Instagram" && !body.mediaUrl) {
-    return { status: "MEDIA_REQUIRED", error: "Instagram requires a public image/video URL." };
-  }
-
-  return {
-    status: "CONNECTED_NOT_IMPLEMENTED",
-    error: "This account is connected, but this platform's final media/account-specific publish call still needs to be completed."
-  };
+  return { status: "UNSUPPORTED" };
 }
 
 export async function POST(request) {
