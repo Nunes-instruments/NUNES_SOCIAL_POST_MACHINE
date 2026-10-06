@@ -7,6 +7,12 @@ function b64url(buf) {
   return Buffer.from(buf).toString("base64url");
 }
 
+function publicOrigin(request) {
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  return host ? `${proto}://${host}` : new URL(request.url).origin;
+}
+
 export async function GET(request, { params }) {
   const { platform } = await params;
   const id = String(platform || "").toLowerCase();
@@ -22,7 +28,7 @@ export async function GET(request, { params }) {
     return NextResponse.redirect(new URL(`/connect/${config.label}?error=app-not-configured`, request.url));
   }
 
-  const origin = new URL(request.url).origin;
+  const origin = publicOrigin(request);
   const redirectUri = `${origin}/api/oauth/${id}/callback`;
   const state = b64url(crypto.randomBytes(24));
   const url = new URL(config.auth);
