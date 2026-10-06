@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { put } from "@vercel/blob";
-import { cookieName, unseal } from "../../lib/oauth-store";
+import { cookieName, unseal, readConfig } from "../../lib/oauth-store";
 
 export const runtime = "nodejs";
 
@@ -32,9 +32,9 @@ async function archive(body, external) {
   return { ...post, url: blob.url };
 }
 
-async function postLinkedIn(body, token) {
+async function postLinkedIn(body, token, config) {
   if (!token?.access_token) return { status: "NOT_CONNECTED" };
-  const author = process.env.LINKEDIN_AUTHOR_URN;
+  const author = config?.accountId || process.env.LINKEDIN_AUTHOR_URN;
   if (!author) return { status: "ACCOUNT_ID_REQUIRED", error: "Set LINKEDIN_AUTHOR_URN." };
 
   const r = await fetch("https://api.linkedin.com/rest/posts", {
@@ -80,9 +80,9 @@ async function postX(body, token) {
   };
 }
 
-async function postFacebook(body, token) {
+async function postFacebook(body, token, config) {
   if (!token?.access_token) return { status: "NOT_CONNECTED" };
-  const pageId = process.env.FACEBOOK_PAGE_ID;
+  const pageId = config?.accountId || process.env.FACEBOOK_PAGE_ID;
   if (!pageId) return { status: "ACCOUNT_ID_REQUIRED", error: "Set FACEBOOK_PAGE_ID." };
 
   const data = new URLSearchParams({ message: body.text, access_token: token.access_token });
@@ -141,9 +141,11 @@ async function externalPublish(body) {
   if (body.channel === "Bluesky") return postBluesky(body);
 
   const token = await tokenFor(body.channel);
-  if (body.channel === "LinkedIn") return postLinkedIn(body, token);
+  const jar = await cookies();
+  const cfg = readConfig(jar, String(body.channel||"").toLowerCase());
+  if (body.channel === "LinkedIn") return postLinkedIn(body, token, cfg);
   if (body.channel === "X") return postX(body, token);
-  if (body.channel === "Facebook") return postFacebook(body, token);
+  if (body.channel === "Facebook") return postFacebook(body, token, cfg);
 
   if (!token?.access_token) return { status: "NOT_CONNECTED" };
 
