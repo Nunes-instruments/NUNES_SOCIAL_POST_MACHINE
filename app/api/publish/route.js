@@ -1,10 +1,14 @@
 import { cookies } from "next/headers";
 import { put } from "@vercel/blob";
 import { cookieName, unseal, readConfig, secretFromJar } from "../../lib/oauth-store";
+import { getSharedState } from "../../lib/shared-state";
 
 export const runtime = "nodejs";
 
 async function tokenFor(platform) {
+  const id=String(platform||"").toLowerCase();
+  const shared=await getSharedState(`token:${id}`);
+  if(shared?.access_token) return shared;
   const jar = await cookies();
   return unseal(jar.get(cookieName(platform))?.value, secretFromJar(jar));
 }
@@ -186,7 +190,8 @@ async function externalPublish(body) {
 
   const token = await tokenFor(body.channel);
   const jar = await cookies();
-  const cfg = readConfig(jar, String(body.channel||"").toLowerCase());
+  const id=String(body.channel||"").toLowerCase();
+  const cfg = (await getSharedState(`config:${id}`)) || readConfig(jar,id);
   if (body.channel === "LinkedIn") return postLinkedIn(body, token, cfg);
   if (body.channel === "X") return postX(body, token);
   if (body.channel === "Facebook") return postFacebook(body, token, cfg);
