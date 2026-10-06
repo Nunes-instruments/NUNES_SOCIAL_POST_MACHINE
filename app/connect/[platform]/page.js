@@ -3,6 +3,18 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 
+const OFFICIAL = {
+  LinkedIn: "https://www.linkedin.com/login",
+  Facebook: "https://www.facebook.com/login",
+  Instagram: "https://www.instagram.com/accounts/login/",
+  Threads: "https://www.threads.net/login",
+  X: "https://x.com/i/flow/login",
+  Pinterest: "https://www.pinterest.com/login/",
+  TikTok: "https://www.tiktok.com/login",
+  YouTube: "https://accounts.google.com/ServiceLogin?service=youtube",
+  Bluesky: "https://bsky.app/"
+};
+
 const META = {
   LinkedIn: { color: "#0A66C2", icon: "in" },
   Facebook: { color: "#1877F2", icon: "f" },
@@ -53,14 +65,32 @@ export default function ConnectPlatform() {
         )}
 
         {platform === "Bluesky" ? (
-          <div className="warning">
-            <strong>Bluesky uses an App Password</strong>
-            <span>Add BLUESKY_IDENTIFIER and BLUESKY_APP_PASSWORD in Vercel. Do not use your normal password.</span>
-          </div>
+          <>
+            <div className="warning">
+              <strong>Bluesky uses an App Password for automated posting</strong>
+              <span>Use a Bluesky App Password, not your normal account password. Add it securely in Vercel Environment Variables.</span>
+            </div>
+            <a className="secondaryBtn wideBtn" href={OFFICIAL[platform]} target="_blank" rel="noreferrer">Open official Bluesky login</a>
+          </>
         ) : (
-          <a className="loginBtn" style={{ background: meta.color }} href={`/api/oauth/${platform.toLowerCase()}/start`}>
-            Login with {platform}
-          </a>
+          <>
+            <a
+              className={state?.configured ? "loginBtn" : "loginBtn disabledLogin"}
+              style={{ background: meta.color }}
+              href={state?.configured ? `/api/oauth/${platform.toLowerCase()}/start` : "#"}
+              onClick={e => { if (!state?.configured) e.preventDefault(); }}
+            >
+              {state?.configured ? `Connect securely with ${platform}` : "Developer app setup required"}
+            </a>
+            <a className="secondaryBtn wideBtn" href={OFFICIAL[platform]} target="_blank" rel="noreferrer">
+              Open official {platform} login
+            </a>
+            {!state?.configured && (
+              <div className="noteBox">
+                You can log into the correct account on the official website now. Automatic posting becomes available after this app has the platform OAuth Client ID and Client Secret configured.
+              </div>
+            )}
+          </>
         )}
 
         <button className="secondaryBtn" onClick={refresh}>Refresh connection status</button>
@@ -69,7 +99,7 @@ export default function ConnectPlatform() {
           <div><b>1</b><span>Create the provider developer app once.</span></div>
           <div><b>2</b><span>Add Client ID/Secret in Vercel.</span></div>
           <div><b>3</b><span>Add the callback URL shown in README.</span></div>
-          <div><b>4</b><span>Click Login with {platform} and approve access.</span></div>
+          <div><b>4</b><span>{platform === "Bluesky" ? "Configure the Bluesky App Password securely, then refresh." : `Click Connect securely with ${platform} and approve access on the provider website.`}</span></div>
         </div>
       </section>
     </main>
