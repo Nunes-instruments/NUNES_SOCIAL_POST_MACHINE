@@ -34,7 +34,7 @@ async function archive(body, external) {
 
 async function postLinkedIn(body, token, config) {
   if (!token?.access_token) return { status: "NOT_CONNECTED" };
-  const author = config?.accountId || process.env.LINKEDIN_AUTHOR_URN;
+  const author = config?.accountId || token?.author_urn || process.env.LINKEDIN_AUTHOR_URN;
   if (!author) return { status: "ACCOUNT_ID_REQUIRED", error: "Set LINKEDIN_AUTHOR_URN." };
 
   const r = await fetch("https://api.linkedin.com/rest/posts", {
