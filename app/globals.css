@@ -77,3 +77,7 @@ button,.secondaryBtn{border:1px solid var(--line);background:#fff;color:var(--in
   .grid.two{grid-template-columns:1fr}.platformGrid{grid-template-columns:1fr}
   .loginRow{grid-template-columns:1fr}.badges{flex-wrap:wrap}
 }
+
+.wideBtn{display:flex;max-width:380px;margin:10px auto;align-items:center}
+.disabledLogin{opacity:.55;cursor:not-allowed;filter:grayscale(.2)}
+.noteBox{max-width:520px;margin:12px auto;padding:12px 14px;border:1px solid #d9e5f1;background:#f7fbff;border-radius:10px;color:#607089;font-size:11px;line-height:1.55;text-align:left}
