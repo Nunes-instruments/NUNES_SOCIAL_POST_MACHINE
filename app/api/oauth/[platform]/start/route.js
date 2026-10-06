@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { OAUTH } from "../../../../lib/oauth-config";
-import { readConfig } from "../../../../lib/oauth-store";
+import { BROWSER_KEY_COOKIE, KEY_COOKIE_OPTIONS, createBrowserSecret, readConfig, secretFromJar } from "../../../../lib/oauth-store";
 
 function b64url(buf) {
   return Buffer.from(buf).toString("base64url");
@@ -46,6 +46,9 @@ export async function GET(request, { params }) {
     url.searchParams.set("code_challenge_method", "S256");
 
     const response = NextResponse.redirect(url);
+    if (!secretFromJar(request.cookies)) {
+      response.cookies.set(BROWSER_KEY_COOKIE, createBrowserSecret(), KEY_COOKIE_OPTIONS);
+    }
     response.cookies.set(`nunes_pkce_${id}`, verifier, {
       httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 600
     });
@@ -56,6 +59,9 @@ export async function GET(request, { params }) {
   }
 
   const response = NextResponse.redirect(url);
+  if (!secretFromJar(request.cookies)) {
+    response.cookies.set(BROWSER_KEY_COOKIE, createBrowserSecret(), KEY_COOKIE_OPTIONS);
+  }
   response.cookies.set(`nunes_state_${id}`, state, {
     httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 600
   });
