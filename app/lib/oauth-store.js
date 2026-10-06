@@ -13,6 +13,14 @@ export function cookieName(platform) {
   return `nunes_oauth_${String(platform).toLowerCase()}`;
 }
 
+export function configCookieName(platform) {
+  return `nunes_cfg_${String(platform).toLowerCase()}`;
+}
+
+export function readConfig(jar, platform) {
+  return unseal(jar.get(configCookieName(platform))?.value);
+}
+
 export const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: true,
