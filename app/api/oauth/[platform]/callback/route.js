@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { OAUTH, envReady } from "../../../../lib/oauth-config";
-import { seal, cookieName, COOKIE_OPTIONS } from "../../../../lib/oauth-store";
+import { OAUTH } from "../../../../lib/oauth-config";
+import { seal, cookieName, COOKIE_OPTIONS, readConfig } from "../../../../lib/oauth-store";
 
 export async function GET(request, { params }) {
   const { platform } = await params;
@@ -8,7 +8,10 @@ export async function GET(request, { params }) {
   const config = OAUTH[id];
   const url = new URL(request.url);
 
-  if (!config || !envReady(id)) {
+  const saved=readConfig(request.cookies,id);
+  const clientId=saved?.clientId || (config ? clientId : null);
+  const clientSecret=saved?.clientSecret || (config ? clientSecret : null);
+  if (!config || !clientId || !clientSecret) {
     return NextResponse.redirect(new URL(`/connect/${platform}?error=app-not-configured`, request.url));
   }
 
@@ -31,20 +34,20 @@ export async function GET(request, { params }) {
   body.set("redirect_uri", redirectUri);
 
   if (config.tiktok) {
-    body.set("client_key", process.env[config.clientId]);
-    body.set("client_secret", process.env[config.clientSecret]);
+    body.set("client_key", clientId);
+    body.set("client_secret", clientSecret);
   } else if (config.basic) {
     headers.Authorization = "Basic " + Buffer.from(
-      process.env[config.clientId] + ":" + process.env[config.clientSecret]
+      clientId + ":" + clientSecret
     ).toString("base64");
   } else if (config.meta) {
-    tokenUrl += `?client_id=${encodeURIComponent(process.env[config.clientId])}` +
-      `&client_secret=${encodeURIComponent(process.env[config.clientSecret])}` +
+    tokenUrl += `?client_id=${encodeURIComponent(clientId)}` +
+      `&client_secret=${encodeURIComponent(clientSecret)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&code=${encodeURIComponent(code)}`;
   } else {
-    body.set("client_id", process.env[config.clientId]);
-    body.set("client_secret", process.env[config.clientSecret]);
+    body.set("client_id", clientId);
+    body.set("client_secret", clientSecret);
   }
 
   if (config.pkce) {
@@ -54,7 +57,7 @@ export async function GET(request, { params }) {
     }
     body.set("code_verifier", verifier);
     headers.Authorization = "Basic " + Buffer.from(
-      process.env[config.clientId] + ":" + process.env[config.clientSecret]
+      clientId + ":" + clientSecret
     ).toString("base64");
   }
 
