@@ -14,6 +14,18 @@ const PLATFORMS = [
   ["YouTube","▶","40–100 words","Clear, searchable"]
 ];
 
+const PLATFORM_META = {
+  LinkedIn:{note:"Professional post",caps:["Text","Image","Link"]},
+  Facebook:{note:"Page publishing",caps:["Text","Image","Video"]},
+  Instagram:{note:"Professional account",caps:["Image","Reel","Caption"]},
+  Threads:{note:"Conversation post",caps:["Text","Media"]},
+  X:{note:"Short-form update",caps:["Text","Media"]},
+  Bluesky:{note:"Community update",caps:["Text"]},
+  Pinterest:{note:"Visual discovery",caps:["Image","Pin"]},
+  TikTok:{note:"Short video / photo",caps:["Video","Photo"]},
+  YouTube:{note:"Video publishing",caps:["Video"]}
+};
+
 const ANGLES = ["AUTO — Choose Best Angle","Educational","Problem / Solution","Industry Insight","Behind the Scenes","Product Spotlight","Buyer Question","How-To","Common Mistake","Quick Tip","New Arrival","Customer Problem","Comparison","FAQ","Company Update"];
 
 function chooseAngle(topic){
@@ -89,6 +101,16 @@ export default function Home(){
     if(q.includes("preview")||q.includes("publish")) return setTab("Preview");
     if(q.includes("create")||q.includes("post")||q.includes("content")) return setTab("Create Post");
     setTab("Dashboard");
+  }
+
+  function shareWhatsApp(){
+    const message=[
+      topic || "Nunes Instruments",
+      brief,
+      cta
+    ].filter(Boolean).join("\n\n");
+    if(!message.trim()) return alert("Add a topic or message first.");
+    window.open("https://wa.me/?text="+encodeURIComponent(message),"_blank","noopener,noreferrer");
   }
 
   function generate(){
@@ -199,8 +221,39 @@ export default function Home(){
                   <label>CTA<input value={cta} onChange={e=>setCta(e.target.value)} placeholder="Example: Send us your application and quantity"/></label>
                   <label>Media URL (optional)<input value={mediaUrl} onChange={e=>setMediaUrl(e.target.value)} placeholder="Public image/video URL"/></label>
                 </article>
-                <article className="panel"><div className="panelHead"><h3>Publish to</h3><span>{selected.length}/9 selected</span></div>
-                  <div className="platformGrid">{PLATFORMS.map(([name,icon])=><button key={name} className={`platformCard ${selected.includes(name)?"selected":""}`} onClick={()=>setSelected(s=>s.includes(name)?s.filter(x=>x!==name):[...s,name])}><span className="platformIcon">{icon}</span><strong>{name}</strong><i className={connections[name]?.connected?"conn on":"conn"}>{connections[name]?.connected?"Connected":"Not connected"}</i></button>)}</div>
+                <article className="panel socialPublishPanel">
+                  <div className="panelHead">
+                    <div><h3>Publish to</h3><p className="panelSub">Choose networks and see exactly what each one supports.</p></div>
+                    <span>{selected.length}/9 selected</span>
+                  </div>
+                  <div className="platformGrid upgradedPlatformGrid">
+                    {PLATFORMS.map(([name,icon])=>{
+                      const meta=PLATFORM_META[name]||{note:"Social post",caps:["Post"]};
+                      const connected=Boolean(connections[name]?.connected);
+                      const isSelected=selected.includes(name);
+                      return <div key={name} className={`platformCardPro ${isSelected?"selected":""}`}>
+                        <button className="platformMainAction" onClick={()=>setSelected(s=>s.includes(name)?s.filter(x=>x!==name):[...s,name])}>
+                          <span className={`platformIcon brand-${name.toLowerCase()}`}>{icon}</span>
+                          <span className="platformText">
+                            <strong>{name}</strong>
+                            <small>{meta.note}</small>
+                          </span>
+                          <span className={connected?"statusDot connected":"statusDot"}>{connected?"Connected":"Not connected"}</span>
+                        </button>
+                        <div className="capRow">{meta.caps.map(cap=><span key={cap}>{cap}</span>)}</div>
+                        <div className="platformFooter">
+                          <button className="selectBtn" onClick={()=>setSelected(s=>s.includes(name)?s.filter(x=>x!==name):[...s,name])}>{isSelected?"Selected ✓":"Select"}</button>
+                          {!connected && <a href={`/connect/${encodeURIComponent(name)}`}>Connect</a>}
+                        </div>
+                      </div>
+                    })}
+                  </div>
+
+                  <div className="whatsappQuickShare">
+                    <div className="whatsappBadge">WA</div>
+                    <div><strong>WhatsApp Quick Share</strong><span>Open WhatsApp with this post pre-filled. No change to your connected social accounts.</span></div>
+                    <button onClick={shareWhatsApp}>Share</button>
+                  </div>
                 </article>
               </section>
             </>
