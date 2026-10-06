@@ -21,6 +21,14 @@ async function archive(body, external) {
     text: String(body.text || "").slice(0, 8000),
     mediaUrl: String(body.mediaUrl || "").slice(0, 2000),
     angle: String(body.angle || "").slice(0, 100),
+    attachments: Array.isArray(body.attachments)
+      ? body.attachments.slice(0,20).map(x=>({
+          name:String(x?.name||"").slice(0,260),
+          url:String(x?.url||"").slice(0,2000),
+          type:String(x?.type||"").slice(0,150),
+          size:Number(x?.size||0)
+        }))
+      : [],
     publishedAt: new Date().toISOString(),
     external
   };
