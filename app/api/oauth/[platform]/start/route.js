@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { OAUTH } from "../../../../lib/oauth-config";
 import { BROWSER_KEY_COOKIE, KEY_COOKIE_OPTIONS, createBrowserSecret, readConfig, secretFromJar } from "../../../../lib/oauth-store";
+import { getSharedState } from "../../../../lib/shared-state";
 
 function b64url(buf) {
   return Buffer.from(buf).toString("base64url");
@@ -23,7 +24,7 @@ export async function GET(request, { params }) {
     return NextResponse.redirect(new URL(`/connect/${platform}?error=unsupported`, request.url));
   }
 
-  const saved=readConfig(request.cookies,id);
+  const saved=(await getSharedState(`config:${id}`)) || readConfig(request.cookies,id);
   const clientId=saved?.clientId || process.env[config.clientId];
   if (!clientId) {
     return NextResponse.redirect(new URL(`/connect/${config.label}?error=app-not-configured`, request.url));
