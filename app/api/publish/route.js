@@ -130,10 +130,22 @@ async function postX(body, token) {
 
 async function postFacebook(body, token, config) {
   if (!token?.access_token) return { status: "NOT_CONNECTED" };
-  const pageId = config?.accountId || process.env.FACEBOOK_PAGE_ID;
-  if (!pageId) return { status: "ACCOUNT_ID_REQUIRED", error: "Set FACEBOOK_PAGE_ID." };
+  let pageId = config?.accountId || process.env.FACEBOOK_PAGE_ID || null;
+  let pageToken = token.access_token;
 
-  const data = new URLSearchParams({ message: body.text, access_token: token.access_token });
+  const pages = await fetch("https://graph.facebook.com/v24.0/me/accounts?fields=id,name,access_token&access_token=" + encodeURIComponent(token.access_token), { cache:"no-store" });
+  const pj = await pages.json().catch(()=>({}));
+  if (pages.ok && Array.isArray(pj.data) && pj.data.length) {
+    const page = pageId ? pj.data.find(x=>String(x.id)===String(pageId)) : pj.data[0];
+    if (page) {
+      pageId = page.id;
+      pageToken = page.access_token || pageToken;
+    }
+  }
+
+  if (!pageId) return { status: "ACCOUNT_ID_REQUIRED", error: "No Facebook Page was detected. Enter the Page ID in API Setup." };
+
+  const data = new URLSearchParams({ message: body.text, access_token: pageToken });
   const r = await fetch(`https://graph.facebook.com/v24.0/${pageId}/feed`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
