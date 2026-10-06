@@ -61,6 +61,7 @@ export default function Home(){
   const [connections,setConnections]=useState({});
   const [results,setResults]=useState([]);
   const [search,setSearch]=useState("");
+  const [timeframe,setTimeframe]=useState("7 Days");
 
   async function refreshConnections(){
     try{
@@ -74,6 +75,21 @@ export default function Home(){
   const connectedCount=useMemo(()=>PLATFORMS.filter(p=>connections[p[0]]?.connected).length,[connections]);
   const readyCount=useMemo(()=>PLATFORMS.filter(p=>connections[p[0]]?.configured).length,[connections]);
   const successfulPosts=results.filter(r=>r.status==="POSTED").length;
+
+  function runSearch(){
+    const q=search.trim().toLowerCase();
+    if(!q) return;
+    const platform=PLATFORMS.find(([name])=>name.toLowerCase().includes(q));
+    if(platform){
+      window.location.href=`/connect/${encodeURIComponent(platform[0])}`;
+      return;
+    }
+    if(q.includes("connect")||q.includes("network")) return setTab("Connections");
+    if(q.includes("result")||q.includes("history")) return setTab("Results");
+    if(q.includes("preview")||q.includes("publish")) return setTab("Preview");
+    if(q.includes("create")||q.includes("post")||q.includes("content")) return setTab("Create Post");
+    setTab("Dashboard");
+  }
 
   function generate(){
     if(!topic.trim()) return alert("Add a post topic first.");
@@ -123,11 +139,11 @@ export default function Home(){
 
       <section className="workspace">
         <header className="workspaceTop">
-          <div className="searchBox">⌕<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search anything..."/></div>
+          <div className="searchBox">⌕<input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")runSearch()}} placeholder="Search anything..."/></div>
           <div className="topActions">
             <button className="quickCreate" onClick={()=>setTab("Create Post")}>＋ Quick Create</button>
-            <button className="iconBtn">♡</button>
-            <button className="iconBtn">▢</button>
+            <button className="iconBtn" title="Publishing results" onClick={()=>setTab("Results")}>✓</button>
+            <button className="iconBtn" title="Social connections" onClick={()=>setTab("Connections")}>◎</button>
             <div className="miniAvatar">NI</div>
           </div>
         </header>
@@ -137,7 +153,7 @@ export default function Home(){
             <>
               <div className="welcomeRow">
                 <div><h1>Good morning 👋</h1><p>Here’s what’s happening across your social publishing workspace today.</p></div>
-                <div className="filters"><button>Account: Nunes Instruments</button><button>Timeframe: Last 7 Days</button></div>
+                <div className="filters"><button onClick={()=>setTab("Connections")}>Account: Nunes Instruments</button><button onClick={()=>setTimeframe(v=>v==="7 Days"?"30 Days":v==="30 Days"?"90 Days":"7 Days")}>Timeframe: {timeframe}</button></div>
               </div>
 
               <section className="metricGrid">
@@ -150,7 +166,7 @@ export default function Home(){
               <section className="networkCards">
                 {["Instagram","TikTok","YouTube","LinkedIn"].map(name=>{
                   const p=PLATFORMS.find(x=>x[0]===name);
-                  return <button key={name} className="networkCard" onClick={()=>{setTab("Connections")}}>
+                  return <button key={name} className="networkCard" onClick={()=>{window.location.href=`/connect/${encodeURIComponent(name)}`}}>
                     <div className="networkHead"><span className="miniPlatform">{p?.[1]}</span><strong>{name}</strong><em className={connections[name]?.connected?"good":"mutedDot"}>{connections[name]?.connected?"Connected":"Setup"}</em></div>
                     <div className="networkValue">{connections[name]?.connected?"Ready":"—"}</div>
                     <svg viewBox="0 0 120 32" aria-hidden="true"><polyline points="0,26 15,23 28,25 42,17 58,19 72,12 88,14 103,8 120,5" fill="none" stroke="currentColor" strokeWidth="2"/></svg>
@@ -159,13 +175,13 @@ export default function Home(){
               </section>
 
               <section className="analyticsPanel">
-                <div className="panelTitle"><div><h2>Audience Growth</h2><p>Follower progress across connected channels</p></div><div className="segment"><button className="active">All Networks</button><button>7 Days</button><button>30 Days</button></div></div>
+                <div className="panelTitle"><div><h2>Audience Growth</h2><p>Follower progress across connected channels</p></div><div className="segment"><button className="active" onClick={()=>setTab("Connections")}>All Networks</button><button className={timeframe==="7 Days"?"active":""} onClick={()=>setTimeframe("7 Days")}>7 Days</button><button className={timeframe==="30 Days"?"active":""} onClick={()=>setTimeframe("30 Days")}>30 Days</button></div></div>
                 <div className="analyticsStats"><div><span>Total Networks</span><strong>{connectedCount}</strong></div><div><span>Configured</span><strong>{readyCount}</strong></div><div><span>Selected</span><strong>{selected.length}</strong></div><div><span>Success Rate</span><strong>{results.length?Math.round(successfulPosts/results.length*100):0}%</strong></div></div>
                 <div className="chartWrap"><svg viewBox="0 0 900 240" preserveAspectRatio="none"><defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#16a9df" stopOpacity=".22"/><stop offset="100%" stopColor="#16a9df" stopOpacity="0"/></linearGradient></defs><path d="M0 205 L90 185 L170 198 L255 160 L350 142 L435 165 L520 112 L610 120 L700 90 L795 72 L900 30 L900 240 L0 240 Z" fill="url(#fill)"/><polyline points="0,205 90,185 170,198 255,160 350,142 435,165 520,112 610,120 700,90 795,72 900,30" fill="none" stroke="#16a9df" strokeWidth="4"/></svg></div>
               </section>
 
               <section className="engagementPanel">
-                <div className="panelTitle"><div><h2>Publishing Overview</h2><p>Current workflow health and account readiness</p></div><button className="moreBtn">•••</button></div>
+                <div className="panelTitle"><div><h2>Publishing Overview</h2><p>Current workflow health and account readiness</p></div><button className="moreBtn" onClick={()=>setTab("Results")}>•••</button></div>
                 <div className="overviewStats"><div><span>Connected</span><strong>{connectedCount}</strong></div><div><span>Configured</span><strong>{readyCount}</strong></div><div><span>Drafts</span><strong>{Object.keys(drafts).length}</strong></div><div><span>Selected</span><strong>{selected.length}</strong></div><div><span>Results</span><strong>{results.length}</strong></div></div>
                 <div className="distribution"><span style={{width:`${Math.max(10,connectedCount/9*100)}%`}}>Connected</span><span style={{width:`${Math.max(10,(9-connectedCount)/9*100)}%`}}>Pending</span></div>
               </section>
