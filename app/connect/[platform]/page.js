@@ -66,7 +66,10 @@ export default function ConnectPlatform() {
   async function saveApiSetup(e){
     e.preventDefault();
     setSaveMsg("Saving securely...");
-    const r=await fetch("/api/integrations/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform:platform.toLowerCase(),clientId,clientSecret,accountId})});
+    const normalizedAccountId = platform==="LinkedIn" && /^\d+$/.test(accountId.trim())
+      ? `urn:li:organization:${accountId.trim()}`
+      : accountId.trim();
+    const r=await fetch("/api/integrations/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({platform:platform.toLowerCase(),clientId,clientSecret,accountId:normalizedAccountId})});
     const j=await r.json().catch(()=>({}));
     if(j.ok){
       setClientSecret("");
@@ -134,11 +137,11 @@ export default function ConnectPlatform() {
 
               {platform === "Bluesky" ? (
                 <div className="warning"><strong>Bluesky uses an App Password</strong><span>Use a Bluesky App Password, not your normal password.</span></div>
-              ) : (
-                <a className={state?.configured ? "loginBtn" : "loginBtn disabledLogin"} style={{ background: meta.color }} href={state?.configured ? `/api/oauth/${platform.toLowerCase()}/start` : "#"} onClick={e=>{if(!state?.configured)e.preventDefault()}}>
-                  {state?.configured ? `Connect securely with ${platform}` : "Save API Setup first"}
+              ) : state?.configured ? (
+                <a className="loginBtn" style={{ background: meta.color }} href={`/api/oauth/${platform.toLowerCase()}/start`}>
+                  Reconnect securely with {platform}
                 </a>
-              )}
+              ) : null}
 
               <a className="secondaryBtn wideBtn" href={OFFICIAL[platform]} target="_blank" rel="noreferrer">Open official {platform} login</a>
               <button className="secondaryBtn" onClick={refresh}>Refresh connection status</button>
