@@ -1,12 +1,12 @@
 import { cookies } from "next/headers";
 import { put } from "@vercel/blob";
-import { cookieName, unseal, readConfig } from "../../lib/oauth-store";
+import { cookieName, unseal, readConfig, secretFromJar } from "../../lib/oauth-store";
 
 export const runtime = "nodejs";
 
 async function tokenFor(platform) {
   const jar = await cookies();
-  return unseal(jar.get(cookieName(platform))?.value);
+  return unseal(jar.get(cookieName(platform))?.value, secretFromJar(jar));
 }
 
 async function archive(body, external) {
