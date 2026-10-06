@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { OAUTH } from "../../../../lib/oauth-config";
 import { seal, cookieName, COOKIE_OPTIONS, readConfig, secretFromJar } from "../../../../lib/oauth-store";
 
+function publicOrigin(request) {
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  return host ? `${proto}://${host}` : new URL(request.url).origin;
+}
+
 export async function GET(request, { params }) {
   const { platform } = await params;
   const id = String(platform || "").toLowerCase();
@@ -9,10 +15,10 @@ export async function GET(request, { params }) {
   const url = new URL(request.url);
 
   const saved=readConfig(request.cookies,id);
-  const clientId=saved?.clientId || (config ? clientId : null);
-  const clientSecret=saved?.clientSecret || (config ? clientSecret : null);
+  const clientId=saved?.clientId || (config ? process.env[config.clientId] : null);
+  const clientSecret=saved?.clientSecret || (config ? process.env[config.clientSecret] : null);
   if (!config || !clientId || !clientSecret) {
-    return NextResponse.redirect(new URL(`/connect/${platform}?error=app-not-configured`, request.url));
+    return NextResponse.redirect(new URL(`/connect/${platform}?error=app-not-configured`, publicOrigin(request)));
   }
 
   const state = url.searchParams.get("state");
@@ -21,10 +27,11 @@ export async function GET(request, { params }) {
   const expected = request.cookies.get(`nunes_state_${id}`)?.value;
 
   if (error || !code || !state || !expected || state !== expected) {
-    return NextResponse.redirect(new URL(`/connect/${config.label}?error=oauth-failed`, request.url));
+    return NextResponse.redirect(new URL(`/connect/${config.label}?error=oauth-failed`, publicOrigin(request)));
   }
 
-  const redirectUri = `${url.origin}/api/oauth/${id}/callback`;
+  const origin = publicOrigin(request);
+  const redirectUri = `${origin}/api/oauth/${id}/callback`;
   const body = new URLSearchParams();
   let headers = { "Content-Type": "application/x-www-form-urlencoded" };
   let tokenUrl = config.token;
@@ -53,7 +60,7 @@ export async function GET(request, { params }) {
   if (config.pkce) {
     const verifier = request.cookies.get(`nunes_pkce_${id}`)?.value;
     if (!verifier) {
-      return NextResponse.redirect(new URL(`/connect/${config.label}?error=pkce-missing`, request.url));
+      return NextResponse.redirect(new URL(`/connect/${config.label}?error=pkce-missing`, publicOrigin(request)));
     }
     body.set("code_verifier", verifier);
     headers.Authorization = "Basic " + Buffer.from(
@@ -74,7 +81,7 @@ export async function GET(request, { params }) {
     try { data = JSON.parse(text); } catch {}
 
     if (!tr.ok || !data.access_token) {
-      return NextResponse.redirect(new URL(`/connect/${config.label}?error=token-exchange`, request.url));
+      return NextResponse.redirect(new URL(`/connect/${config.label}?error=token-exchange`, publicOrigin(request)));
     }
 
     const payload = {
@@ -86,14 +93,14 @@ export async function GET(request, { params }) {
       createdAt: Date.now()
     };
 
-    const response = NextResponse.redirect(new URL(`/connect/${config.label}?connected=1`, request.url));
+    const response = NextResponse.redirect(new URL(`/connect/${config.label}?connected=1`, publicOrigin(request)));
     const secret = secretFromJar(request.cookies);
-    if (!secret) return NextResponse.redirect(new URL(`/connect/${config.label}?error=secure-session-missing`, request.url));
+    if (!secret) return NextResponse.redirect(new URL(`/connect/${config.label}?error=secure-session-missing`, publicOrigin(request)));
     response.cookies.set(cookieName(config.label), seal(payload, secret), COOKIE_OPTIONS);
     response.cookies.delete(`nunes_state_${id}`);
     response.cookies.delete(`nunes_pkce_${id}`);
     return response;
   } catch {
-    return NextResponse.redirect(new URL(`/connect/${config.label}?error=token-exchange`, request.url));
+    return NextResponse.redirect(new URL(`/connect/${config.label}?error=token-exchange`, publicOrigin(request)));
   }
 }
