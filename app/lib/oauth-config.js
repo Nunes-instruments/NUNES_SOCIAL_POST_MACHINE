@@ -14,7 +14,7 @@ export const OAUTH = {
     clientSecret: "META_APP_SECRET",
     auth: "https://www.facebook.com/v24.0/dialog/oauth",
     token: "https://graph.facebook.com/v24.0/oauth/access_token",
-    scope: "pages_show_list pages_read_engagement pages_manage_posts",
+    scope: "pages_show_list pages_read_engagement pages_manage_posts instagram_basic instagram_content_publish business_management whatsapp_business_management whatsapp_business_messaging",
     clientKey: "client_id",
     meta: true
   },
