@@ -69,10 +69,11 @@ export async function GET() {
       await setSharedState(`config:${id}`,browserConfig);
     }
 
+    let instagramRepair=null;
     if(id==="instagram" && !token?.access_token && saved?.accountId){
       const fbToken=await getSharedState("token:facebook");
-      const repaired=await ensureInstagramConnection(saved,fbToken);
-      if(repaired?.connected) token=await getSharedState("token:instagram") || token;
+      instagramRepair=await ensureInstagramConnection(saved,fbToken);
+      if(instagramRepair?.connected) token=await getSharedState("token:instagram") || token;
     }
 
     const configured = envReady(id) || Boolean(saved?.clientId && saved?.clientSecret);
@@ -91,6 +92,20 @@ export async function GET() {
           health.health==="limited-permissions" ? "Reconnect Meta and grant Page publishing permissions." :
           health.health==="page-access-required" ? "Reconnect Meta and select/authorize the Nunes Instrumentation Page." :
           health.health==="insufficient-page-role" ? "Your Facebook user needs Page content/admin access." : ""
+      };
+    } else if(id==="instagram") {
+      integrations[cfg.label] = {
+        connected:Boolean(token?.access_token && saved?.accountId),
+        configured,
+        mode:token?.access_token && saved?.accountId ? "connected" : configured ? "configured-action-required" : "app-setup-required",
+        accountId:saved?.accountId||"",
+        name:saved?.name||token?.username||"",
+        repair:instagramRepair,
+        actionRequired:token?.access_token && saved?.accountId ? "" :
+          instagramRepair?.reason==="instagram-not-linked-to-page" ? "Link the Instagram Professional account to the Nunes Instrumentation Facebook Page in Meta Business Settings." :
+          instagramRepair?.reason==="instagram-validation-failed" ? "Meta did not authorize Instagram Graph access. Reconnect Meta with instagram_basic and instagram_content_publish." :
+          instagramRepair?.reason==="facebook-page-not-found" ? "The saved Meta login cannot access the configured Facebook Page." :
+          "Refresh or reconnect Meta to complete Instagram authorization."
       };
     } else {
       integrations[cfg.label] = {
