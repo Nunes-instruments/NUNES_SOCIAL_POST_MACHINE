@@ -137,7 +137,8 @@ export async function GET(request, { params }) {
         );
         const pagesJson = await pagesRes.json().catch(()=>({}));
         const pages = Array.isArray(pagesJson.data) ? pagesJson.data : [];
-        const page = pages[0] || null;
+        const configuredFb = (await getSharedState("config:facebook")) || {};
+        const page = (configuredFb.accountId ? pages.find(p=>String(p.id)===String(configuredFb.accountId)) : null) || pages[0] || null;
 
         if (page) {
           const existingFb = (await getSharedState("config:facebook")) || {};
@@ -149,33 +150,40 @@ export async function GET(request, { params }) {
             savedAt: Date.now()
           });
 
-          if (page.instagram_business_account?.id) {
-            const igId = page.instagram_business_account.id;
-            const existingIg = (await getSharedState("config:instagram")) || {};
-            let igName = "";
-            try {
-              const igRes = await fetch(
-                `https://graph.facebook.com/v24.0/${igId}?fields=id,username&access_token=${encodeURIComponent(page.access_token || data.access_token)}`,
-                { cache:"no-store" }
-              );
-              const igJson = await igRes.json().catch(()=>({}));
-              igName = igJson.username || "";
-            } catch {}
+          const existingIg = (await getSharedState("config:instagram")) || {};
+          const igId = page.instagram_business_account?.id || existingIg.accountId || "";
+          if (igId) {
+            const igAccessToken = page.access_token || data.access_token;
+            const igRes = await fetch(
+              `https://graph.facebook.com/v24.0/${encodeURIComponent(igId)}?fields=id,username,account_type&access_token=${encodeURIComponent(igAccessToken)}`,
+              { cache:"no-store" }
+            );
+            const igJson = await igRes.json().catch(()=>({}));
+            if (igRes.ok && igJson?.id) {
+              await setSharedState("config:instagram", {
+                ...existingIg,
+                platform:"instagram",
+                accountId:String(igJson.id),
+                secondaryId:page.id || existingIg.secondaryId || "",
+                name:igJson.username || existingIg.name || "",
+                accountType:igJson.account_type || existingIg.accountType || "",
+                validatedAt:Date.now(),
+                savedAt:Date.now()
+              });
 
-            await setSharedState("config:instagram", {
-              ...existingIg,
-              platform:"instagram",
-              accountId:igId,
-              secondaryId:page.id || "",
-              name:igName,
-              savedAt:Date.now()
-            });
-
-            await setSharedState("token:instagram", {
-              ...payload,
-              platform:"Instagram",
-              access_token:page.access_token || data.access_token
-            });
+              await setSharedState("token:instagram", {
+                ...payload,
+                platform:"Instagram",
+                access_token:igAccessToken,
+                instagram_user_id:String(igJson.id),
+                username:igJson.username || "",
+                account_type:igJson.account_type || "",
+                linkedFrom:"facebook-meta-token",
+                validatedAt:Date.now()
+              });
+            } else {
+              console.warn("[META OAUTH] Instagram validation failed", igJson?.error?.message || `HTTP ${igRes.status}`);
+            }
           }
         }
 
