@@ -28,13 +28,14 @@ export async function POST(request){
     const wabaId=String(body.wabaId||"").trim();
     const phoneNumberId=String(body.phoneNumberId||"").trim();
     const whatsappToken=String(body.whatsappToken||"").trim();
+    const configId=String(body.configId||"").trim();
 
     if(!clientId||!clientSecret){
       return Response.json({ok:false,error:"Meta App ID and App Secret are required"},{status:400});
     }
 
-    await setSharedState("config:facebook",{platform:"facebook",clientId,clientSecret,accountId:facebookPageId,secondaryId:"",savedAt:Date.now()});
-    await setSharedState("config:instagram",{platform:"instagram",clientId,clientSecret,accountId:instagramUserId,secondaryId:facebookPageId,savedAt:Date.now()});
+    await setSharedState("config:facebook",{platform:"facebook",clientId,clientSecret,accountId:facebookPageId,secondaryId:"",configId,savedAt:Date.now()});
+    await setSharedState("config:instagram",{platform:"instagram",clientId,clientSecret,accountId:instagramUserId,secondaryId:facebookPageId,configId,savedAt:Date.now()});
     await setSharedState("config:whatsapp",{platform:"whatsapp",clientId,clientSecret,accountId:phoneNumberId,secondaryId:wabaId,savedAt:Date.now()});
 
     if(whatsappToken){
