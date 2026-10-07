@@ -14,6 +14,8 @@ export default function MetaConnectPage(){
   const [whatsappToken,setWhatsappToken]=useState("");
   const [msg,setMsg]=useState("");
   const [oauthCompleted,setOauthCompleted]=useState(false);
+  const [oauthError,setOauthError]=useState("");
+  const [oauthDetail,setOauthDetail]=useState("");
 
   async function refresh(){
     const r=await fetch("/api/meta/setup",{cache:"no-store"});
@@ -27,7 +29,12 @@ export default function MetaConnectPage(){
 
   useEffect(()=>{
     refresh();
-    if(typeof window!=="undefined") setOauthCompleted(new URLSearchParams(window.location.search).get("connected")==="1");
+    if(typeof window!=="undefined"){
+      const q=new URLSearchParams(window.location.search);
+      setOauthCompleted(q.get("connected")==="1");
+      setOauthError(q.get("error")||"");
+      setOauthDetail(q.get("detail")||"");
+    }
   },[]);
 
   async function saveAndConnect(e){
@@ -90,6 +97,7 @@ export default function MetaConnectPage(){
           </div>
 
           {oauthCompleted && <div className="important"><strong>Meta authorization completed</strong><span>NUNES has refreshed Facebook, Instagram and WhatsApp assets that Meta allowed this app to access.</span></div>}
+          {oauthError && <div className="warning metaError"><strong>Meta connection failed: {oauthError}</strong><span>{oauthDetail || "Retry after checking the Meta configuration and app permissions."}</span></div>}
 
           <section className="metaStatusGrid">
             <div className={fb?"metaServiceCard connected":"metaServiceCard"}>
