@@ -9,7 +9,7 @@ export async function ensureInstagramConnection(igConfig, fbToken){
 
   try{
     const pagesUrl=new URL("https://graph.facebook.com/v24.0/me/accounts");
-    pagesUrl.searchParams.set("fields","id,name,access_token,instagram_business_account");
+    pagesUrl.searchParams.set("fields","id,name,access_token,instagram_business_account,connected_instagram_account");
     pagesUrl.searchParams.set("access_token",userToken);
     const pagesRes=await fetch(pagesUrl,{cache:"no-store"});
     const pagesJson=await pagesRes.json().catch(e=>({parseError:String(e?.message||e)}));
@@ -23,8 +23,8 @@ export async function ensureInstagramConnection(igConfig, fbToken){
 
     let page=null;
     if(configuredPageId) page=pages.find(p=>String(p.id)===configuredPageId)||null;
-    if(!page && configuredIgId) page=pages.find(p=>String(p.instagram_business_account?.id||"")===configuredIgId)||null;
-    if(!page) page=pages.find(p=>p.instagram_business_account?.id)||pages[0]||null;
+    if(!page && configuredIgId) page=pages.find(p=>String(p.instagram_business_account?.id||p.connected_instagram_account?.id||"")===configuredIgId)||null;
+    if(!page) page=pages.find(p=>p.instagram_business_account?.id||p.connected_instagram_account?.id)||pages[0]||null;
 
     if(!page?.id){
       return {connected:false,reason:"facebook-page-not-found",detail:"No accessible Facebook Page was returned by Meta."};
@@ -36,7 +36,7 @@ export async function ensureInstagramConnection(igConfig, fbToken){
     // Do not trust a manually-entered Business Manager asset ID as the Graph user ID.
     let pageLinkedIgId="";
     const pageUrl=new URL(`https://graph.facebook.com/v24.0/${encodeURIComponent(page.id)}`);
-    pageUrl.searchParams.set("fields","instagram_business_account");
+    pageUrl.searchParams.set("fields","instagram_business_account,connected_instagram_account");
     pageUrl.searchParams.set("access_token",pageToken);
     const pageRes=await fetch(pageUrl,{cache:"no-store"});
     const pageJson=await pageRes.json().catch(e=>({parseError:String(e?.message||e)}));
