@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 function maskPhone(v){
   const s=String(v||"").trim();
@@ -12,7 +11,6 @@ function maskPhone(v){
 }
 
 export default function WhatsAppHub(){
-  const qs=useSearchParams();
   const [numbers,setNumbers]=useState([]);
   const [history,setHistory]=useState([]);
   const [selected,setSelected]=useState([]);
@@ -48,7 +46,7 @@ export default function WhatsAppHub(){
 
   useEffect(()=>{
     refresh();
-    if(qs.get("add")==="1") setShowAdd(true);
+    if(typeof window!=="undefined" && new URLSearchParams(window.location.search).get("add")==="1") setShowAdd(true);
   },[]);
 
   const connectedCount=useMemo(()=>numbers.filter(n=>n.connected&&n.enabled!==false).length,[numbers]);
