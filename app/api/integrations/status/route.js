@@ -19,7 +19,7 @@ async function validateFacebookPublishing(token, saved) {
     if(pr.ok && Array.isArray(pj.data)) {
       granted=pj.data.filter(x=>x.status==="granted").map(x=>x.permission);
     }
-  } catch {}
+  } catch (e) { console.warn("[FACEBOOK HEALTH] permissions check failed", String(e?.message||e)); }
 
   try {
     const ar=await fetch("https://graph.facebook.com/v24.0/me/accounts?fields=id,name,access_token,tasks&access_token="+encodeURIComponent(token.access_token),{cache:"no-store"});
@@ -32,7 +32,7 @@ async function validateFacebookPublishing(token, saved) {
       tasks=Array.isArray(page.tasks)?page.tasks:[];
       canCreate=!tasks.length || tasks.includes("CREATE_CONTENT") || tasks.includes("MANAGE");
     }
-  } catch {}
+  } catch (e) { console.warn("[FACEBOOK HEALTH] page access check failed", String(e?.message||e)); }
 
   const missingPermissions=required.filter(x=>!granted.includes(x));
   const connected=pageAccessible && canCreate && missingPermissions.length===0;
@@ -110,6 +110,7 @@ export async function GET() {
     wabaId: waConfig?.secondaryId || "",
     phone: waConfig?.phone || "",
     numbersConnected,
+    numberCount: numbersConnected,
     numbersConfigured: waNumbers.length || (waConfig?.accountId ? 1 : 0)
   };
 
