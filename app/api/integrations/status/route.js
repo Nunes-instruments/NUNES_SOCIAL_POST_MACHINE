@@ -71,9 +71,13 @@ export async function GET() {
     if(id==="facebook"){
       const health=await validateFacebookPublishing(token,saved);
       integrations[cfg.label] = {
-        connected: health.connected,
+        signedIn: Boolean(token?.access_token),
+        sharedSaved: Boolean(token?.access_token),
+        publishingReady: health.connected,
+        connected: Boolean(token?.access_token),
         configured,
-        mode: health.connected ? "connected" : token?.access_token ? health.health : configured ? "ready-to-login" : "app-setup-required",
+        mode: health.connected ? "connected" : token?.access_token ? "signed-in-action-required" : configured ? "ready-to-login" : "app-setup-required",
+        publishingHealth: health.health,
         health,
         actionRequired: health.connected ? "" :
           health.health==="limited-permissions" ? "Reconnect Meta and grant Page publishing permissions." :
