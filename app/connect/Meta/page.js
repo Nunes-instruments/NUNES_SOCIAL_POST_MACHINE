@@ -144,8 +144,10 @@ export default function MetaConnectPage(){
           <section className="connectDashboardGrid">
             <article className="connectCard dashboardConnectCard">
               <div className="brandBubble metaBubble">M</div>
-              <h2>Meta API Setup</h2>
-              <p>Enter the Meta App ID and App Secret once. NUNES will reuse them for Facebook and Instagram and attempt WhatsApp Business discovery during the same authorization.</p>
+              <h2>{viewMode==="admin"?"Meta Account Access":"Meta API Setup"}</h2>
+              <p>{viewMode==="admin"
+                ?"Your Meta login and account connection are stored securely on the server and shared across computers. Only reconnect when Meta permissions need to be refreshed."
+                :"Enter or update Meta developer credentials and technical account IDs."}</p>
 
               {viewMode==="tech" && <form className="apiSetupForm metaSetupForm" onSubmit={saveAndConnect}>
                 <label>Meta App ID
@@ -184,11 +186,16 @@ export default function MetaConnectPage(){
               </form>}
 
               {viewMode==="admin" && state?.metaConfigured && <div className="connectedSummary">
-                <div className="connectedCheck">{fb||ig||wa?"✓":"!"}</div>
-                <div><strong>Meta setup is saved securely</strong><span>API credentials are hidden in Admin View. Use Reconnect only when permissions or account access need to be refreshed.</span></div>
+                <div className="connectedCheck">{fbSignedIn||ig||wa?"✓":"!"}</div>
+                <div>
+                  <strong>{fbSignedIn?"Facebook login saved on shared server":"Meta setup saved securely"}</strong>
+                  <span>{fbSignedIn
+                    ?"This login persists across computers. Publishing permission is checked separately and does not erase the saved login."
+                    :"API credentials are hidden in Admin View. Connect Meta once to save the account session."}</span>
+                </div>
               </div>}
 
-              {state?.metaConfigured && <a className="loginBtn metaLogin" href="/api/oauth/facebook/start">{fbReady?"Reconnect Meta securely":fbSignedIn?"Refresh Meta publishing permission":"Connect Meta securely"}</a>}
+              {state?.metaConfigured && <a className="loginBtn metaLogin" href="/api/oauth/facebook/start">{fbReady?"Reconnect Meta securely":fbSignedIn?"Grant missing Facebook publishing permission":"Connect Meta securely"}</a>}
               <button className="secondaryBtn" onClick={refresh}>Refresh connection status</button>
             </article>
 
