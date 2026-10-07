@@ -7,7 +7,12 @@ async function history(){
 }
 
 export async function GET(){
-  return Response.json({ok:true,history:(await history()).slice(0,100)});
+  try{
+    return Response.json({ok:true,history:(await history()).slice(0,100)});
+  }catch(e){
+    console.error("[WHATSAPP STATUS] history load failed",String(e?.message||e));
+    return Response.json({ok:false,error:"Unable to load WhatsApp status history."},{status:500});
+  }
 }
 
 export async function POST(request){
@@ -22,7 +27,7 @@ export async function POST(request){
       numberIds:selected,
       scheduledFor:body.scheduledFor?String(body.scheduledFor):"",
       createdAt:new Date().toISOString(),
-      status:action==="schedule"?"SCHEDULED":action==="publish"?"UNSUPPORTED":"DRAFT"
+      status:action==="schedule"?"SCHEDULED_MANUAL":action==="publish"?"UNSUPPORTED":"DRAFT"
     };
 
     if(!entry.text && !entry.mediaUrl){
