@@ -2,27 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { isEnabledProvider } from "../../lib/social-providers";
 
 const OFFICIAL = {
   LinkedIn: "https://www.linkedin.com/login",
   Facebook: "https://www.facebook.com/login",
   Instagram: "https://www.instagram.com/accounts/login/",
-  Threads: "https://www.threads.net/login",
-  X: "https://x.com/i/flow/login",
-  Pinterest: "https://www.pinterest.com/login/",
-  TikTok: "https://www.tiktok.com/login",
-  YouTube: "https://accounts.google.com/ServiceLogin?service=youtube",
-  Bluesky: "https://bsky.app/"
+  YouTube: "https://accounts.google.com/ServiceLogin?service=youtube"
 };
 
 const FIELDS = {
   LinkedIn:{accountLabel:"Author URN (optional now)",accountPlaceholder:"urn:li:organization:123456789"},
   Facebook:{accountLabel:"Facebook Page ID",accountPlaceholder:"123456789012345"},
   Instagram:{accountLabel:"Instagram User ID",accountPlaceholder:"17841400000000000"},
-  Threads:{accountLabel:"Threads User ID (optional)",accountPlaceholder:"Account/User ID"},
-  X:{accountLabel:"X User ID (optional)",accountPlaceholder:"User ID"},
-  Pinterest:{accountLabel:"Pinterest Board ID",accountPlaceholder:"Board ID"},
-  TikTok:{accountLabel:"TikTok User/Open ID (optional)",accountPlaceholder:"User/Open ID"},
   YouTube:{accountLabel:"YouTube Channel ID (optional)",accountPlaceholder:"UC..."}
 };
 
@@ -30,12 +22,7 @@ const META = {
   LinkedIn: { color: "#0A66C2", icon: "in" },
   Facebook: { color: "#1877F2", icon: "f" },
   Instagram: { color: "#E1306C", icon: "◎" },
-  Threads: { color: "#111111", icon: "@" },
-  X: { color: "#111111", icon: "X" },
-  Pinterest: { color: "#E60023", icon: "P" },
-  TikTok: { color: "#111111", icon: "♪" },
-  YouTube: { color: "#FF0000", icon: "▶" },
-  Bluesky: { color: "#1185FE", icon: "☁" }
+  YouTube: { color: "#FF0000", icon: "▶" }
 };
 
 export default function ConnectPlatform() {
@@ -43,6 +30,10 @@ export default function ConnectPlatform() {
   const qs = useSearchParams();
   const platform = decodeURIComponent(String(params.platform || ""));
   useEffect(() => {
+    if (!isEnabledProvider(platform)) {
+      window.location.replace("/");
+      return;
+    }
     if (platform === "Facebook" || platform === "Instagram") {
       window.location.replace("/connect/Meta");
     }
@@ -142,7 +133,7 @@ export default function ConnectPlatform() {
                 <div className="warning"><strong>API setup required</strong><span>Open Tech View, enter the provider credentials once, then authorize the account.</span></div>
               )}
 
-              {viewMode==="tech" && platform !== "Bluesky" && (
+              {viewMode==="tech" && (
                 <form className="apiSetupForm" onSubmit={saveApiSetup}>
                   <h3>API Setup</h3>
                   <label>Client ID / App ID<input value={clientId} onChange={e=>setClientId(e.target.value)} placeholder="Paste Client ID / App ID" required /></label>
@@ -159,8 +150,6 @@ export default function ConnectPlatform() {
                   <a className="secondaryBtn wideBtn" href="/" >Back to Accounts Hub</a>
                   <button className="secondaryBtn" onClick={refresh}>Refresh status</button>
                 </>
-              ) : platform === "Bluesky" ? (
-                <div className="warning"><strong>Bluesky uses an App Password</strong><span>Use a Bluesky App Password, not your normal password.</span></div>
               ) : state?.configured ? (
                 <a className="loginBtn" style={{ background: meta.color }} href={`/api/oauth/${platform.toLowerCase()}/start`}>
                   Reconnect securely with {platform}
