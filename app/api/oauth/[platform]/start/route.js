@@ -41,8 +41,6 @@ export async function GET(request, { params }) {
   if (id === "facebook" && saved?.configId) {
     url.searchParams.set("config_id", saved.configId);
     url.searchParams.set("override_default_response_type", "true");
-    url.searchParams.set("auth_type", "rerequest");
-    url.searchParams.set("return_scopes", "true");
   } else {
     url.searchParams.set("scope", config.scope);
   }
