@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { put } from "@vercel/blob";
 import { cookieName, unseal, readConfig, secretFromJar } from "../../lib/oauth-store";
 import { getSharedState, setSharedState } from "../../lib/shared-state";
+import { isEnabledProvider } from "../../lib/social-providers";
 
 export const runtime = "nodejs";
 
@@ -453,7 +454,9 @@ async function postYouTube(body, token) {
 }
 
 async function externalPublish(body) {
-  if (body.channel === "Bluesky") return postBluesky(body);
+  if (!isEnabledProvider(body.channel)) {
+    return { status:"UNSUPPORTED_PROVIDER", error:"This social channel is disabled in NUNES Social Media Command Center." };
+  }
 
   const token = await tokenFor(body.channel);
   const jar = await cookies();
