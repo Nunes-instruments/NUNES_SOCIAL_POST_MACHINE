@@ -28,25 +28,6 @@ export const OAUTH = {
     clientKey: "client_id",
     meta: true
   },
-  threads: {
-    label: "Threads",
-    clientId: "THREADS_APP_ID",
-    clientSecret: "THREADS_APP_SECRET",
-    auth: "https://threads.net/oauth/authorize",
-    token: "https://graph.threads.net/oauth/access_token",
-    scope: "threads_basic threads_content_publish",
-    clientKey: "client_id"
-  },
-  pinterest: {
-    label: "Pinterest",
-    clientId: "PINTEREST_APP_ID",
-    clientSecret: "PINTEREST_APP_SECRET",
-    auth: "https://www.pinterest.com/oauth/",
-    token: "https://api.pinterest.com/v5/oauth/token",
-    scope: "boards:read pins:read pins:write",
-    clientKey: "client_id",
-    basic: true
-  },
   youtube: {
     label: "YouTube",
     clientId: "GOOGLE_CLIENT_ID",
@@ -57,26 +38,6 @@ export const OAUTH = {
     clientKey: "client_id",
     google: true
   },
-  tiktok: {
-    label: "TikTok",
-    clientId: "TIKTOK_CLIENT_KEY",
-    clientSecret: "TIKTOK_CLIENT_SECRET",
-    auth: "https://www.tiktok.com/v2/auth/authorize/",
-    token: "https://open.tiktokapis.com/v2/oauth/token/",
-    scope: "user.info.basic,video.upload,video.publish",
-    clientKey: "client_key",
-    tiktok: true
-  },
-  x: {
-    label: "X",
-    clientId: "X_CLIENT_ID",
-    clientSecret: "X_CLIENT_SECRET",
-    auth: "https://twitter.com/i/oauth2/authorize",
-    token: "https://api.x.com/2/oauth2/token",
-    scope: "tweet.read tweet.write users.read offline.access",
-    clientKey: "client_id",
-    pkce: true
-  }
 };
 
 export function envReady(id) {
