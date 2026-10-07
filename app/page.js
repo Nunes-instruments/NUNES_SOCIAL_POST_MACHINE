@@ -4,25 +4,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const PLATFORMS = [
   ["LinkedIn","in","80–140 words","Professional, conversational"],
-  ["Instagram","◎","45–90 words","Visual, energetic"],
   ["Facebook","f","60–120 words","Friendly, practical"],
-  ["Threads","@","35–80 words","Conversational, concise"],
-  ["X","X","20–45 words","Sharp, concise"],
-  ["Bluesky","☁","25–60 words","Natural, community-led"],
-  ["Pinterest","P","35–80 words","Searchable, benefit-led"],
-  ["TikTok","♪","20–55 words","Short, energetic"],
+  ["Instagram","◎","45–90 words","Visual, energetic"],
   ["YouTube","▶","40–100 words","Clear, searchable"]
 ];
+
+const ACTIVE_SOCIAL_COUNT = 5;
 
 const PLATFORM_META = {
   LinkedIn:{note:"B2B authority & decision-makers",purpose:"Professional credibility, industry insights, product expertise and lead generation.",template:"Hook → business problem → expert insight → proof/value → CTA",caps:["Text","Image","Link"]},
   Facebook:{note:"Community & customer trust",purpose:"Company updates, offers, service stories, products and broad customer engagement.",template:"Friendly opener → benefit → practical details → CTA",caps:["Text","Image","Video"]},
-  Instagram:{note:"Visual brand & product discovery",purpose:"Product visuals, reels, behind-the-scenes, applications and brand awareness.",template:"Visual hook → short benefit → application → CTA → hashtags",caps:["Image","Reel","Caption"]},
-  Threads:{note:"Conversation & quick expertise",purpose:"Short discussions, opinions, tips and conversational updates.",template:"One strong thought → context → question/CTA",caps:["Text","Media"]},
-  X:{note:"Fast industry updates",purpose:"Concise news, product updates, quick tips and time-sensitive announcements.",template:"Headline → key fact → short CTA",caps:["Text","Media"]},
-  Bluesky:{note:"Community-led updates",purpose:"Natural updates and community conversation.",template:"Human update → useful point → invitation to respond",caps:["Text"]},
-  Pinterest:{note:"Evergreen visual discovery",purpose:"Searchable visual content, product/application inspiration and long-tail discovery.",template:"Search-friendly title → benefit → use case → save/contact CTA",caps:["Image","Pin"]},
-  TikTok:{note:"Short-form reach",purpose:"Quick demos, instrument tips, applications, before/after and educational video content.",template:"3-second hook → demo/value → result → CTA",caps:["Video","Photo"]},
+  Instagram:{note:"Visual brand & product discovery",purpose:"Product visuals, reels, applications and brand awareness.",template:"Visual hook → short benefit → application → CTA → hashtags",caps:["Image","Reel","Caption"]},
   YouTube:{note:"Deep education & demos",purpose:"Product demonstrations, tutorials, comparisons and searchable technical education.",template:"Search title → problem → demo/explanation → takeaway → CTA",caps:["Video"]}
 };
 
@@ -50,13 +42,8 @@ function buildVariants(topic,brief,angle,cta){
   const action=cta||"Send us your requirement, quantity and location and our team will help with the next step.";
   return {
     LinkedIn:`${intro}\n\n${body}\n\nGood selection is not only about a model number. It is about matching the instrument or solution to the real application and checking the relevant specification before purchase.\n\n${action}\n\n#NunesInstruments #Instrumentation #IndustrialSolutions`,
-    Instagram:`${intro}\n\n${body}\n\nNeed help choosing? Send us your requirement.\n\n#NunesInstruments #Instrumentation #TestingEquipment #IndustrialTools #Laboratory #Engineering`,
     Facebook:`${intro}\n\n${body}\n\n${action} We will keep the recommendation practical and based on what you actually need.\n\n#NunesInstruments`,
-    Threads:`${intro} ${body} If you have a similar requirement, send us the application details and we will help narrow it down.`,
-    X:`${intro} ${body} Need help? Send the application + quantity. #NunesInstruments`,
-    Bluesky:`${intro}\n\n${body}\n\nHave a similar requirement? Share the details and we will help you work through it.`,
-    Pinterest:`${topic}: ${body}\n\nSave this for your next requirement. For selection support, share the application and quantity with Nunes Instruments.`,
-    TikTok:`${intro}\n\n${body}\n\nFollow for more practical instrumentation tips. Message us if you need help choosing.`,
+    Instagram:`${intro}\n\n${body}\n\nNeed help choosing? Send us your requirement.\n\n#NunesInstruments #Instrumentation #TestingEquipment #IndustrialTools #Laboratory #Engineering`,
     YouTube:`${topic} — practical buyer guidance from Nunes Instruments.\n\n${body}\n\n${action} Subscribe for more instrumentation, testing and laboratory equipment guidance.`
   };
 }
@@ -99,13 +86,14 @@ export default function Home(){
   }
   useEffect(()=>{refreshConnections();refreshAccountHub()},[]);
 
-  const connectedCount=useMemo(()=>PLATFORMS.filter(p=>connections[p[0]]?.connected).length,[connections]);
-  const readyCount=useMemo(()=>PLATFORMS.filter(p=>connections[p[0]]?.configured).length,[connections]);
+  const connectedCount=useMemo(()=>PLATFORMS.filter(p=>connections[p[0]]?.connected).length + (connections.WhatsApp?.connected?1:0),[connections]);
+  const readyCount=useMemo(()=>PLATFORMS.filter(p=>connections[p[0]]?.configured).length + (connections.WhatsApp?.configured?1:0),[connections]);
   const successfulPosts=results.filter(r=>r.status==="POSTED").length;
 
   function runSearch(){
     const q=search.trim().toLowerCase();
     if(!q) return;
+    if(q.includes("whatsapp")) { window.location.href="/whatsapp"; return; }
     const platform=PLATFORMS.find(([name])=>name.toLowerCase().includes(q));
     if(platform){
       window.location.href=`/connect/${encodeURIComponent(platform[0])}`;
@@ -250,14 +238,14 @@ export default function Home(){
               </div>
 
               <section className="metricGrid">
-                <div className="metricCard"><span>CONNECTED NETWORKS</span><strong>{connectedCount}/9</strong><small>{readyCount} configured</small></div>
+                <div className="metricCard"><span>CONNECTED NETWORKS</span><strong>{connectedCount} of {ACTIVE_SOCIAL_COUNT}</strong><small>{readyCount} configured</small></div>
                 <div className="metricCard"><span>POSTS READY</span><strong>{Object.keys(drafts).length}</strong><small>{selected.length} selected</small></div>
                 <div className="metricCard"><span>POSTED THIS RUN</span><strong>{successfulPosts}</strong><small>{results.length||0} checked</small></div>
                 <div className="metricCard"><span>STATUS</span><strong>Live</strong><small>Direct OAuth/API</small></div>
               </section>
 
               <section className="networkCards">
-                {["Instagram","TikTok","YouTube","LinkedIn"].map(name=>{
+                {["LinkedIn","Facebook","Instagram","YouTube"].map(name=>{
                   const p=PLATFORMS.find(x=>x[0]===name);
                   return <button key={name} className="networkCard" onClick={()=>{window.location.href=(name==="Facebook"||name==="Instagram")?"/connect/Meta":`/connect/${encodeURIComponent(name)}`}}>
                     <div className="networkHead"><span className="miniPlatform">{p?.[1]}</span><strong>{name}</strong><em className={connections[name]?.connected?"good":"mutedDot"}>{connections[name]?.connected?"Connected":"Setup"}</em></div>
@@ -276,7 +264,7 @@ export default function Home(){
               <section className="engagementPanel">
                 <div className="panelTitle"><div><h2>Publishing Overview</h2><p>Current workflow health and account readiness</p></div><button className="moreBtn" onClick={()=>setTab("Results")}>•••</button></div>
                 <div className="overviewStats"><div><span>Connected</span><strong>{connectedCount}</strong></div><div><span>Configured</span><strong>{readyCount}</strong></div><div><span>Drafts</span><strong>{Object.keys(drafts).length}</strong></div><div><span>Selected</span><strong>{selected.length}</strong></div><div><span>Results</span><strong>{results.length}</strong></div></div>
-                <div className="distribution"><span style={{width:`${Math.max(10,connectedCount/9*100)}%`}}>Connected</span><span style={{width:`${Math.max(10,(9-connectedCount)/9*100)}%`}}>Pending</span></div>
+                <div className="distribution"><span style={{width:`${Math.max(10,connectedCount/ACTIVE_SOCIAL_COUNT*100)}%`}}>Connected</span><span style={{width:`${Math.max(10,(ACTIVE_SOCIAL_COUNT-connectedCount)/ACTIVE_SOCIAL_COUNT*100)}%`}}>Pending</span></div>
               </section>
             </>
           )}
@@ -345,7 +333,7 @@ export default function Home(){
                 <article className="panel socialPublishPanel">
                   <div className="panelHead">
                     <div><h3>Publish to</h3><p className="panelSub">Choose networks and see exactly what each one supports.</p></div>
-                    <span>{selected.length}/9 selected</span>
+                    <span>{selected.length}/4 selected</span>
                   </div>
                   <div className="platformGrid upgradedPlatformGrid">
                     {PLATFORMS.map(([name,icon])=>{
@@ -376,8 +364,8 @@ export default function Home(){
 
                   <div className="whatsappQuickShare">
                     <div className="whatsappBadge">WA</div>
-                    <div><strong>WhatsApp Quick Share</strong><span>Open WhatsApp with this post pre-filled. No change to your connected social accounts.</span></div>
-                    <button onClick={shareWhatsApp}>Share</button>
+                    <div><strong>WhatsApp Business Hub</strong><span>Manage multiple NUNES WhatsApp numbers separately from normal social publishing.</span></div>
+                    <button onClick={()=>{window.location.href="/whatsapp"}}>Manage WhatsApp</button>
                   </div>
                 </article>
               </section>
@@ -423,9 +411,11 @@ export default function Home(){
                   : hubAccount==="WhatsApp"
                     ?"https://business.facebook.com/wa/manage/home"
                     :"https://business.facebook.com/latest/home";
-                const connect=(hubAccount==="Facebook"||hubAccount==="Instagram"||hubAccount==="WhatsApp")
-                  ?"/connect/Meta"
-                  :"/connect/LinkedIn";
+                const connect=hubAccount==="WhatsApp"
+                  ?"/whatsapp"
+                  :(hubAccount==="Facebook"||hubAccount==="Instagram")
+                    ?"/connect/Meta"
+                    :"/connect/LinkedIn";
                 return <section className="accountHubLayout">
                   <article className="panel accountManagerPanel">
                     <div className="panelHead">
@@ -494,32 +484,36 @@ export default function Home(){
 
           {tab==="Connections" && (
             <>
-              <div className="pageHeading"><div><span>SOCIAL NETWORKS</span><h1>Connect your accounts</h1><p>Direct OAuth/API connection. n8n is not required.</p></div><button onClick={refreshConnections}>Refresh</button></div>
-              <section className="accounts modernAccounts">
-                <div className="important"><strong>{appMode==="admin"?"Admin View":"Tech View"}</strong><span>{appMode==="admin"?"Simple account status and management. API credentials stay hidden once an account is connected.":"Technical provider setup, reconnect and diagnostics remain available when needed."}</span></div>
-
-                <a className="metaUnifiedCard" href="/connect/Meta">
-                  <div className="metaUnifiedIcon">M</div>
-                  <div>
-                    <strong>Connect Meta Business</strong>
-                    <span>Facebook + Instagram + WhatsApp in one setup</span>
-                  </div>
-                  <div className="metaMiniStatuses">
-                    <span className={connections.Facebook?.connected?"ok":""}>Facebook</span>
-                    <span className={connections.Instagram?.connected?"ok":""}>Instagram</span>
-                    <span className={connections.WhatsApp?.connected?"ok":""}>WhatsApp</span>
-                  </div>
-                  <b>Open →</b>
-                </a>
-
-                <div className="loginList">{PLATFORMS.map(([name,icon])=>{
+              <div className="pageHeading">
+                <div><span>SOCIAL ACCOUNTS</span><h1>Manage social accounts</h1><p>Only the channels used by Nunes Instrumentation are shown here.</p></div>
+                <button onClick={()=>{refreshConnections();refreshAccountHub()}}>Refresh</button>
+              </div>
+              <section className="activeSocialGrid">
+                {["LinkedIn","Facebook","Instagram","YouTube"].map(name=>{
+                  const p=PLATFORMS.find(x=>x[0]===name);
                   const meta=PLATFORM_META[name]||{};
-                  return <div className="loginRow connectionPurposeRow" key={name}>
-                    <a className={`socialLogin ${name.toLowerCase()}`} href={(name==="Facebook"||name==="Instagram")?"/connect/Meta":`/connect/${encodeURIComponent(name)}`}><span>{icon}</span>{connections[name]?.connected?"Manage":"Connect"} {name}</a>
-                    <div className="connectionPurpose"><strong>{meta.note}</strong><span>{meta.purpose}</span></div>
-                    <span className={connections[name]?.connected?"pill ok":"pill"}>{connections[name]?.connected?"connected":connections[name]?.mode||"not-connected"}</span>
+                  const state=connections[name]||{};
+                  const href=(name==="Facebook"||name==="Instagram")?"/connect/Meta":`/connect/${encodeURIComponent(name)}`;
+                  return <article className="activeSocialCard" key={name}>
+                    <div className={`platformIcon brand-${name.toLowerCase()}`}>{p?.[1]}</div>
+                    <div className="activeSocialText">
+                      <strong>{name}</strong>
+                      <span>{meta.note}</span>
+                    </div>
+                    <span className={state.connected?"pill ok":"pill"}>{state.connected?"Connected":"Not connected"}</span>
+                    <a className="secondaryBtn" href={href}>{state.connected?"Manage":"Connect "+name}</a>
+                  </article>
+                })}
+                <article className="activeSocialCard whatsappActiveCard">
+                  <div className="whatsappBadge">WA</div>
+                  <div className="activeSocialText">
+                    <strong>WhatsApp</strong>
+                    <span>{connections.WhatsApp?.numberCount||0} Numbers Connected</span>
                   </div>
-                })}</div>
+                  <span className={connections.WhatsApp?.connected?"pill ok":"pill"}>{connections.WhatsApp?.connected?"Connected":"Not connected"}</span>
+                  <a className="secondaryBtn" href="/whatsapp">Manage WhatsApp</a>
+                  <a className="secondaryBtn addWaBtn" href="/whatsapp?add=1">+ Add WhatsApp Number</a>
+                </article>
               </section>
             </>
           )}
