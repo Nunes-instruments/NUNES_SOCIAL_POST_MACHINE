@@ -71,6 +71,8 @@ export default function Home(){
   const [selected,setSelected]=useState(PLATFORMS.map(x=>x[0]));
   const [drafts,setDrafts]=useState({});
   const [connections,setConnections]=useState({});
+  const [accountHub,setAccountHub]=useState({});
+  const [hubAccount,setHubAccount]=useState("Facebook");
   const [results,setResults]=useState([]);
   const [search,setSearch]=useState("");
   const [timeframe,setTimeframe]=useState("7 Days");
@@ -87,7 +89,14 @@ export default function Home(){
       setConnections(j.integrations||{});
     }catch{}
   }
-  useEffect(()=>{refreshConnections()},[]);
+  async function refreshAccountHub(){
+    try{
+      const r=await fetch("/api/accounts/hub",{cache:"no-store"});
+      const j=await r.json();
+      if(r.ok && j?.accounts) setAccountHub(j.accounts);
+    }catch{}
+  }
+  useEffect(()=>{refreshConnections();refreshAccountHub()},[]);
 
   const connectedCount=useMemo(()=>PLATFORMS.filter(p=>connections[p[0]]?.connected).length,[connections]);
   const readyCount=useMemo(()=>PLATFORMS.filter(p=>connections[p[0]]?.configured).length,[connections]);
@@ -189,7 +198,7 @@ export default function Home(){
   }
 
   const nav=[
-    ["Dashboard","⌂"],["Create Post","＋"],["Connections","◎"],["Preview","▣"],["Results","✓"]
+    ["Dashboard","⌂"],["Accounts Hub","◉"],["Create Post","＋"],["Connections","◎"],["Preview","▣"],["Results","✓"]
   ];
 
   return (
@@ -203,7 +212,7 @@ export default function Home(){
 
         <div className="sideGroupLabel">SOCIAL</div>
         <nav className="sideNav secondary">
-          <button onClick={()=>{window.location.href="/accounts"}}><span>◎</span>Accounts Hub</button>
+          <button onClick={()=>{setTab("Accounts Hub");refreshAccountHub()}}><span>◎</span>Accounts Hub</button>
           <button onClick={()=>setTab("Connections")}><span>↗</span>Social Networks</button>
           <button onClick={()=>setTab("Create Post")}><span>▤</span>Content</button>
           <button onClick={()=>setTab("Preview")}><span>➤</span>Publishing</button>
@@ -370,6 +379,107 @@ export default function Home(){
             <>
               <div className="pageHeading"><div><span>PUBLISHING</span><h1>Preview & edit</h1><p>Review each platform version before publishing.</p></div><button className="primary" onClick={postEverywhere}>Post Everywhere</button></div>
               <section className="grid two">{selected.map(name=>{const p=PLATFORMS.find(x=>x[0]===name);return <article className="panel" key={name}><div className="panelHead"><h3>{name}</h3><span>{p?.[2]}</span></div><small>{p?.[3]}</small><textarea className="postEditor" value={drafts[name]||""} onChange={e=>setDrafts(d=>({...d,[name]:e.target.value}))}/></article>})}</section>
+            </>
+          )}
+
+          {tab==="Accounts Hub" && (
+            <>
+              <div className="pageHeading">
+                <div><span>ACCOUNT MANAGEMENT</span><h1>Accounts Hub</h1><p>Access LinkedIn, Facebook, Instagram and WhatsApp from one system.</p></div>
+                <button onClick={refreshAccountHub}>Refresh accounts</button>
+              </div>
+
+              <section className="accountHubCards">
+                {["LinkedIn","Facebook","Instagram","WhatsApp"].map(name=>{
+                  const a=accountHub[name]||{};
+                  const icon=name==="LinkedIn"?"in":name==="Facebook"?"f":name==="Instagram"?"◎":"WA";
+                  const cls=name==="LinkedIn"?"li":name==="Facebook"?"fb":name==="Instagram"?"ig":"wa";
+                  return <button key={name} className={"accountHubCard "+(hubAccount===name?"selected":"")} onClick={()=>setHubAccount(name)}>
+                    <div className={"accountHubIcon "+cls}>{icon}</div>
+                    <div><strong>{name}</strong><span>{a.name||a.phone||"Nunes account"}</span></div>
+                    <em className={a.connected?"good":"pending"}>{a.connected?"Connected":"Not connected"}</em>
+                  </button>
+                })}
+              </section>
+
+              {(()=>{
+                const a=accountHub[hubAccount]||{};
+                const caps=a.capabilities||(
+                  hubAccount==="WhatsApp"
+                    ? ["Messages","Templates","Settings","Permissions"]
+                    : ["Content","Ads","Insights","Messages","Comments","Settings","Permissions"]
+                );
+                const official=hubAccount==="LinkedIn"
+                  ?"https://www.linkedin.com/"
+                  : hubAccount==="WhatsApp"
+                    ?"https://business.facebook.com/wa/manage/home"
+                    :"https://business.facebook.com/latest/home";
+                const connect=(hubAccount==="Facebook"||hubAccount==="Instagram"||hubAccount==="WhatsApp")
+                  ?"/connect/Meta"
+                  :"/connect/LinkedIn";
+                return <section className="accountHubLayout">
+                  <article className="panel accountManagerPanel">
+                    <div className="panelHead">
+                      <div><h2>{hubAccount}</h2><p>{a.name||a.phone||"Account management"}</p></div>
+                      <span className={a.connected?"pill ok":"pill"}>{a.connected?"CONNECTED":"NOT CONNECTED"}</span>
+                    </div>
+
+                    <div className="accountIdentity">
+                      <div className={"accountHubIcon large "+(hubAccount==="LinkedIn"?"li":hubAccount==="Facebook"?"fb":hubAccount==="Instagram"?"ig":"wa")}>
+                        {hubAccount==="LinkedIn"?"in":hubAccount==="Facebook"?"f":hubAccount==="Instagram"?"◎":"WA"}
+                      </div>
+                      <div>
+                        <strong>{a.name||hubAccount}</strong>
+                        {a.phone&&<span>{a.phone}</span>}
+                        {a.accountId&&<small>ID: {a.accountId}</small>}
+                      </div>
+                      <a className="secondaryBtn" href={connect}>{a.connected?"Connection settings":"Connect account"}</a>
+                    </div>
+
+                    <div className="managementGrid">
+                      {caps.map(cap=><div className="managementTile" key={cap}>
+                        <strong>{cap}</strong>
+                        <span>{cap==="Content"?"Create and publish account content":
+                               cap==="Ads"?"Access advertising tools":
+                               cap==="Insights"?"Review account performance":
+                               cap==="Messages"?"Access business messaging":
+                               cap==="Comments"?"Manage engagement and replies":
+                               cap==="Templates"?"Manage WhatsApp templates":
+                               cap==="Permissions"?"Review business/account access":
+                               "Manage account settings"}</span>
+                      </div>)}
+                    </div>
+
+                    <div className="accountActions">
+                      <button className="primary" onClick={()=>setTab("Create Post")}>Create / Publish Content</button>
+                      <a className="secondaryBtn" href={official} target="_blank" rel="noreferrer">Open official account manager ↗</a>
+                    </div>
+                  </article>
+
+                  <article className="panel accountFeedPanel">
+                    <div className="panelHead">
+                      <div><h2>{hubAccount==="WhatsApp"?"Recent activity":"Recent posts"}</h2><p>Live provider posts when available, otherwise shared NUNES publishing history.</p></div>
+                      <span>{a.recent?.length||0} items</span>
+                    </div>
+                    <div className="accountFeed">
+                      {(a.recent||[]).length===0
+                        ? <div className="empty">{hubAccount==="Instagram"&&!a.connected
+                            ?"Connect the Instagram Professional account to load its posts here."
+                            : "No recent items available yet."}</div>
+                        : a.recent.map((p,i)=><div className="accountPost" key={p.id||i}>
+                            {p.mediaUrl&&<img src={p.mediaUrl} alt="" loading="lazy"/>}
+                            <div>
+                              <strong>{p.topic||p.source||hubAccount}</strong>
+                              <p>{p.text||"Published media"}</p>
+                              <span>{p.createdAt||p.publishedAt?new Date(p.createdAt||p.publishedAt).toLocaleString():"Recently"}</span>
+                              {p.external?.status&&<em>{p.external.status}</em>}
+                              {p.url&&<a href={p.url} target="_blank" rel="noreferrer">Open post ↗</a>}
+                            </div>
+                          </div>)}
+                    </div>
+                  </article>
+                </section>
+              })()}
             </>
           )}
 
