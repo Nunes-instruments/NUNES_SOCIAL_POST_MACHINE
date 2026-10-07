@@ -245,10 +245,10 @@ export default function Home(){
               </section>
 
               <section className="networkCards">
-                {["LinkedIn","Facebook","Instagram","YouTube"].map(name=>{
+                {["LinkedIn","Facebook","Instagram","YouTube","WhatsApp"].map(name=>{
                   const p=PLATFORMS.find(x=>x[0]===name);
-                  return <button key={name} className="networkCard" onClick={()=>{window.location.href=(name==="Facebook"||name==="Instagram")?"/connect/Meta":`/connect/${encodeURIComponent(name)}`}}>
-                    <div className="networkHead"><span className="miniPlatform">{p?.[1]}</span><strong>{name}</strong><em className={connections[name]?.connected?"good":"mutedDot"}>{connections[name]?.connected?"Connected":"Setup"}</em></div>
+                  return <button key={name} className="networkCard" onClick={()=>{window.location.href=name==="WhatsApp"?"/whatsapp":(name==="Facebook"||name==="Instagram")?"/connect/Meta":`/connect/${encodeURIComponent(name)}`}}>
+                    <div className="networkHead"><span className="miniPlatform">{name==="WhatsApp"?"WA":p?.[1]}</span><strong>{name}</strong><em className={connections[name]?.connected?"good":"mutedDot"}>{connections[name]?.connected?"Connected":"Setup"}</em></div>
                     <div className="networkValue">{connections[name]?.connected?"Ready":"—"}</div>
                     <svg viewBox="0 0 120 32" aria-hidden="true"><polyline points="0,26 15,23 28,25 42,17 58,19 72,12 88,14 103,8 120,5" fill="none" stroke="currentColor" strokeWidth="2"/></svg>
                   </button>
