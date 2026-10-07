@@ -184,3 +184,25 @@ button,.secondaryBtn{border:1px solid var(--line);background:#fff;color:var(--in
 .advancedMeta{border:1px solid var(--line);border-radius:8px;padding:10px;margin:12px 0;background:#fff}.advancedMeta summary{cursor:pointer;font-size:9px;font-weight:800;color:#566174}
 .metaPerms{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;display:flex;gap:6px;flex-wrap:wrap}.metaPerms strong{width:100%;font-size:9px;margin-bottom:2px}.metaPerms span{font-size:7px;padding:5px 6px;border-radius:999px;background:#f2f6ff;color:#536ba5}
 @media(max-width:900px){.metaStatusGrid{grid-template-columns:1fr}.metaUnifiedCard{grid-template-columns:40px 1fr}.metaMiniStatuses,.metaUnifiedCard>b{grid-column:2}}
+
+
+/* Unified Accounts Hub */
+.accountHubCards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.accountHubCard{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px;text-align:left}
+.accountHubCard.selected{border-color:#89d3ed;background:#f7fcff;box-shadow:0 0 0 2px #edfaff inset}
+.accountHubCard strong{display:block;font-size:10px}.accountHubCard span{display:block;color:var(--muted);font-size:8px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.accountHubCard em{font-style:normal;font-size:7px;font-weight:800;padding:5px 7px;border-radius:999px;background:#f2f4f7;color:#7a8798}.accountHubCard em.good{background:#eaf9f1;color:#168b5b}
+.accountHubIcon{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:#fff;font-size:10px;font-weight:900}.accountHubIcon.large{width:48px;height:48px;border-radius:12px;font-size:12px}
+.accountHubIcon.li{background:#0A66C2}.accountHubIcon.fb{background:#1877F2}.accountHubIcon.ig{background:linear-gradient(135deg,#833AB4,#E1306C,#F77737)}.accountHubIcon.wa{background:#25D366}
+.accountHubLayout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:14px;align-items:start}
+.accountManagerPanel,.accountFeedPanel{min-height:420px}
+.accountIdentity{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;background:#f9fbfc;border:1px solid #edf1f4;border-radius:10px;padding:12px;margin:14px 0}
+.accountIdentity strong{display:block;font-size:12px}.accountIdentity span,.accountIdentity small{display:block;font-size:8px;color:var(--muted);margin-top:3px}
+.managementGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.managementTile{border:1px solid var(--line);border-radius:9px;padding:11px;background:#fff}.managementTile strong{display:block;font-size:9px}.managementTile span{display:block;color:var(--muted);font-size:8px;line-height:1.45;margin-top:4px}
+.accountActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.accountActions a,.accountActions button{text-decoration:none;font-size:9px}
+.accountFeed{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.accountPost{display:grid;grid-template-columns:72px 1fr;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px;background:#fff}
+.accountPost>img{width:72px;height:72px;object-fit:cover;border-radius:8px;background:#eef3f6}.accountPost strong{display:block;font-size:9px}.accountPost p{font-size:9px;line-height:1.45;color:#526174;margin:4px 0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.accountPost span{font-size:7px;color:#8a96a5}.accountPost em{font-size:7px;font-style:normal;color:#168b5b;margin-left:6px}.accountPost a{display:inline-block;font-size:7px;color:#0d98cf;text-decoration:none;margin-left:8px;font-weight:800}
+@media(max-width:1000px){.accountHubCards{grid-template-columns:repeat(2,1fr)}.accountHubLayout{grid-template-columns:1fr}}
+@media(max-width:650px){.accountHubCards{grid-template-columns:1fr}.managementGrid{grid-template-columns:1fr}.accountIdentity{grid-template-columns:48px 1fr}.accountIdentity>a{grid-column:1/-1}.accountPost{grid-template-columns:56px 1fr}.accountPost>img{width:56px;height:56px}}
