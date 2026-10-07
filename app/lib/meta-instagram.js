@@ -31,16 +31,27 @@ export async function ensureInstagramConnection(igConfig, fbToken){
     }
 
     const pageToken=page.access_token||userToken;
-    let resolvedIgId=String(page.instagram_business_account?.id||configuredIgId||"").trim();
 
-    if(!resolvedIgId){
-      const pageUrl=new URL(`https://graph.facebook.com/v24.0/${encodeURIComponent(page.id)}`);
-      pageUrl.searchParams.set("fields","instagram_business_account");
-      pageUrl.searchParams.set("access_token",pageToken);
-      const pageRes=await fetch(pageUrl,{cache:"no-store"});
-      const pageJson=await pageRes.json().catch(e=>({parseError:String(e?.message||e)}));
-      if(pageRes.ok) resolvedIgId=String(pageJson?.instagram_business_account?.id||"").trim();
+    // Always ask the Page directly for its linked Instagram Graph account.
+    // Do not trust a manually-entered Business Manager asset ID as the Graph user ID.
+    let pageLinkedIgId="";
+    const pageUrl=new URL(`https://graph.facebook.com/v24.0/${encodeURIComponent(page.id)}`);
+    pageUrl.searchParams.set("fields","instagram_business_account");
+    pageUrl.searchParams.set("access_token",pageToken);
+    const pageRes=await fetch(pageUrl,{cache:"no-store"});
+    const pageJson=await pageRes.json().catch(e=>({parseError:String(e?.message||e)}));
+    if(pageRes.ok){
+      pageLinkedIgId=String(pageJson?.instagram_business_account?.id||"").trim();
+    }else{
+      console.warn("[INSTAGRAM CONNECT] Page Instagram link lookup failed",pageJson?.error?.message||`HTTP ${pageRes.status}`);
     }
+
+    const resolvedIgId=String(
+      pageLinkedIgId ||
+      page.instagram_business_account?.id ||
+      configuredIgId ||
+      ""
+    ).trim();
 
     if(!resolvedIgId){
       return {
@@ -48,7 +59,7 @@ export async function ensureInstagramConnection(igConfig, fbToken){
         reason:"instagram-not-linked-to-page",
         pageId:String(page.id),
         pageName:page.name||"",
-        detail:"Meta did not return an Instagram business account linked to this Facebook Page."
+        detail:"Meta did not return an Instagram professional account linked to this Facebook Page."
       };
     }
 
