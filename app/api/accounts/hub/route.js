@@ -19,7 +19,7 @@ async function getFacebookLive(token,cfg){
       mediaUrl:x.full_picture||"",
       source:"Facebook"
     }));
-  }catch{return []}
+  }catch(e){ console.warn("[ACCOUNTS HUB] Facebook feed unavailable",String(e?.message||e)); return [] }
 }
 
 async function getInstagramLive(token,cfg){
@@ -37,23 +37,28 @@ async function getInstagramLive(token,cfg){
       mediaType:x.media_type||"",
       source:"Instagram"
     }));
-  }catch{return []}
+  }catch(e){ console.warn("[ACCOUNTS HUB] Instagram feed unavailable",String(e?.message||e)); return [] }
 }
 
 export async function GET(){
-  const [history,fbCfg,igCfg,waCfg,liCfg,fbTok,igTok,waTok,liTok]=await Promise.all([
+  const [history,fbCfg,igCfg,waCfg,liCfg,ytCfg,fbTok,igTok,waTok,liTok,ytTok,waNumbersRaw]=await Promise.all([
     getSharedState("history:posts"),
     getSharedState("config:facebook"),
     getSharedState("config:instagram"),
     getSharedState("config:whatsapp"),
     getSharedState("config:linkedin"),
+    getSharedState("config:youtube"),
     getSharedState("token:facebook"),
     getSharedState("token:instagram"),
     getSharedState("token:whatsapp"),
-    getSharedState("token:linkedin")
+    getSharedState("token:linkedin"),
+    getSharedState("token:youtube"),
+    getSharedState("whatsapp:numbers")
   ]);
 
   const posts=Array.isArray(history)?history:[];
+  const waNumbers=Array.isArray(waNumbersRaw)?waNumbersRaw:[];
+  const waConnectedCount=waNumbers.filter(n=>n?.enabled!==false && n?.phoneNumberId && (n?.accessToken||waTok?.access_token)).length || (waTok?.access_token&&waCfg?.accountId?1:0);
   const [facebookLive,instagramLive]=await Promise.all([
     getFacebookLive(fbTok,fbCfg),
     getInstagramLive(igTok,igCfg)
@@ -90,15 +95,25 @@ export async function GET(){
         recent:instagramLive.length?instagramLive:byChannel("Instagram"),
         capabilities:["Content","Ads","Insights","Messages","Comments","Settings","Permissions"]
       },
+      YouTube:{
+        connected:Boolean(ytTok?.access_token),
+        configured:Boolean(ytCfg?.clientId&&ytCfg?.clientSecret),
+        name:"Nunes Instrumentation YouTube",
+        accountId:ytCfg?.accountId||"",
+        recent:byChannel("YouTube"),
+        capabilities:["Content","Publishing","Settings","Permissions"]
+      },
       WhatsApp:{
-        connected:Boolean(waTok?.access_token&&waCfg?.accountId),
+        connected:waConnectedCount>0,
         configured:Boolean(waCfg?.clientId&&waCfg?.clientSecret),
         name:waCfg?.verifiedName||"WhatsApp Business",
         phone:waCfg?.phone||"",
         accountId:waCfg?.accountId||"",
         wabaId:waCfg?.secondaryId||"",
+        numberCount:waConnectedCount,
+        numbersConfigured:waNumbers.length || (waCfg?.accountId?1:0),
         recent:byChannel("WhatsApp"),
-        capabilities:["Messages","Templates","Settings","Permissions"]
+        capabilities:["Messages","Templates","Numbers","Settings","Permissions"]
       }
     }
   });
