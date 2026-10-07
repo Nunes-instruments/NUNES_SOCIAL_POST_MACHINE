@@ -1,7 +1,55 @@
 import { getSharedState, setSharedState } from "../../../lib/shared-state";
 
+async function ensureInstagramConnection(igConfig, fbToken){
+  const igId=String(igConfig?.accountId||"").trim();
+  const accessToken=fbToken?.access_token;
+  if(!igId || !accessToken) return {connected:false,reason:!igId?"instagram-id-missing":"meta-token-missing"};
+
+  try{
+    const url=new URL(`https://graph.facebook.com/v24.0/${encodeURIComponent(igId)}`);
+    url.searchParams.set("fields","id,username,account_type");
+    url.searchParams.set("access_token",accessToken);
+    const r=await fetch(url,{cache:"no-store"});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok || !j?.id){
+      const detail=j?.error?.message || `HTTP ${r.status}`;
+      console.warn("[INSTAGRAM CONNECT] validation failed",detail);
+      return {connected:false,reason:"instagram-validation-failed",detail};
+    }
+
+    const tokenPayload={
+      ...fbToken,
+      platform:"Instagram",
+      access_token:accessToken,
+      instagram_user_id:String(j.id),
+      username:j.username||"",
+      account_type:j.account_type||"",
+      linkedFrom:"facebook-meta-token",
+      validatedAt:Date.now()
+    };
+
+    await Promise.all([
+      setSharedState("token:instagram",tokenPayload),
+      setSharedState("config:instagram",{
+        ...igConfig,
+        platform:"instagram",
+        accountId:String(j.id),
+        name:j.username||igConfig?.name||"",
+        accountType:j.account_type||igConfig?.accountType||"",
+        validatedAt:Date.now(),
+        savedAt:Date.now()
+      })
+    ]);
+
+    return {connected:true,userId:String(j.id),name:j.username||"",accountType:j.account_type||""};
+  }catch(e){
+    console.error("[INSTAGRAM CONNECT] validation exception",String(e?.message||e));
+    return {connected:false,reason:"instagram-validation-exception",detail:String(e?.message||e)};
+  }
+}
+
 export async function GET(){
-  const [fb,ig,wa,fbToken,igToken,waToken]=await Promise.all([
+  let [fb,ig,wa,fbToken,igToken,waToken]=await Promise.all([
     getSharedState("config:facebook"),
     getSharedState("config:instagram"),
     getSharedState("config:whatsapp"),
@@ -9,11 +57,29 @@ export async function GET(){
     getSharedState("token:instagram"),
     getSharedState("token:whatsapp")
   ]);
+
+  let instagramHealth=null;
+  if(ig?.accountId && fbToken?.access_token && !igToken?.access_token){
+    instagramHealth=await ensureInstagramConnection(ig,fbToken);
+    if(instagramHealth.connected){
+      [ig,igToken]=await Promise.all([
+        getSharedState("config:instagram"),
+        getSharedState("token:instagram")
+      ]);
+    }
+  }
+
   return Response.json({
     ok:true,
     metaConfigured:Boolean(fb?.clientId&&fb?.clientSecret),
     facebook:{connected:Boolean(fbToken?.access_token),pageId:fb?.accountId||"",name:fb?.name||""},
-    instagram:{connected:Boolean(igToken?.access_token),userId:ig?.accountId||"",name:ig?.name||""},
+    instagram:{
+      connected:Boolean(igToken?.access_token&&ig?.accountId),
+      userId:ig?.accountId||"",
+      name:ig?.name||igToken?.username||"",
+      accountType:ig?.accountType||igToken?.account_type||"",
+      health:instagramHealth
+    },
     whatsapp:{connected:Boolean(waToken?.access_token),phoneNumberId:wa?.accountId||"",wabaId:wa?.secondaryId||"",phone:wa?.phone||""}
   });
 }
@@ -59,6 +125,14 @@ export async function POST(request){
     await setSharedState("config:facebook",{platform:"facebook",clientId,clientSecret,accountId:facebookPageId,secondaryId:"",configId,savedAt:Date.now()});
     await setSharedState("config:instagram",{platform:"instagram",clientId,clientSecret,accountId:instagramUserId,secondaryId:facebookPageId,configId,savedAt:Date.now()});
     await setSharedState("config:whatsapp",{platform:"whatsapp",clientId,clientSecret,accountId:phoneNumberId,secondaryId:wabaId,savedAt:Date.now()});
+
+    if(instagramUserId){
+      const fbToken=await getSharedState("token:facebook");
+      if(fbToken?.access_token){
+        const igConfig=await getSharedState("config:instagram");
+        await ensureInstagramConnection(igConfig,fbToken);
+      }
+    }
 
     if(whatsappToken){
       await setSharedState("token:whatsapp",{platform:"WhatsApp",access_token:whatsappToken,scope:"whatsapp_business_management whatsapp_business_messaging",createdAt:Date.now()});
