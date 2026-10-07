@@ -16,11 +16,19 @@ export async function GET(request, { params }) {
   const config = OAUTH[id];
   const url = new URL(request.url);
 
+  const metaTarget = (code, detail="") => {
+    const q = new URLSearchParams({ error: code });
+    if (detail) q.set("detail", String(detail).slice(0,300));
+    return new URL(`/connect/Meta?${q.toString()}`, publicOrigin(request));
+  };
+
   const saved=(await getSharedState(`config:${id}`)) || readConfig(request.cookies,id);
   const clientId=saved?.clientId || (config ? process.env[config.clientId] : null);
   const clientSecret=saved?.clientSecret || (config ? process.env[config.clientSecret] : null);
   if (!config || !clientId || !clientSecret) {
-    return NextResponse.redirect(new URL(`/connect/${platform}?error=app-not-configured`, publicOrigin(request)));
+    return NextResponse.redirect(id === "facebook"
+      ? metaTarget("app-not-configured")
+      : new URL(`/connect/${platform}?error=app-not-configured`, publicOrigin(request)));
   }
 
   const state = url.searchParams.get("state");
@@ -29,7 +37,10 @@ export async function GET(request, { params }) {
   const expected = request.cookies.get(`nunes_state_${id}`)?.value;
 
   if (error || !code || !state || !expected || state !== expected) {
-    return NextResponse.redirect(new URL(`/connect/${config.label}?error=oauth-failed`, publicOrigin(request)));
+    const detail = url.searchParams.get("error_description") || (state !== expected ? "OAuth state mismatch or expired login session" : "");
+    return NextResponse.redirect(id === "facebook"
+      ? metaTarget("oauth-failed", detail)
+      : new URL(`/connect/${config.label}?error=oauth-failed`, publicOrigin(request)));
   }
 
   const origin = publicOrigin(request);
@@ -83,7 +94,11 @@ export async function GET(request, { params }) {
     try { data = JSON.parse(text); } catch {}
 
     if (!tr.ok || !data.access_token) {
-      return NextResponse.redirect(new URL(`/connect/${config.label}?error=token-exchange`, publicOrigin(request)));
+      const detail = data?.error?.message || data?.error_description || data?.error?.type || text || `HTTP ${tr.status}`;
+      console.error("[META OAUTH] token exchange failed", { status: tr.status, detail: String(detail).slice(0,500) });
+      return NextResponse.redirect(id === "facebook"
+        ? metaTarget("token-exchange", detail)
+        : new URL(`/connect/${config.label}?error=token-exchange`, publicOrigin(request)));
     }
 
     let author_urn = null;
@@ -216,7 +231,9 @@ export async function GET(request, { params }) {
 
     const response = NextResponse.redirect(new URL(id === "facebook" ? "/connect/Meta?connected=1" : `/connect/${config.label}?connected=1`, publicOrigin(request)));
     const secret = secretFromJar(request.cookies);
-    if (!secret) return NextResponse.redirect(new URL(`/connect/${config.label}?error=secure-session-missing`, publicOrigin(request)));
+    if (!secret) return NextResponse.redirect(id === "facebook"
+      ? metaTarget("secure-session-missing","Secure browser session cookie was not returned after Meta login")
+      : new URL(`/connect/${config.label}?error=secure-session-missing`, publicOrigin(request)));
     await setSharedState(`token:${id}`,payload);
     if (id === "facebook") {
       await setSharedState("token:facebook",payload);
@@ -225,7 +242,10 @@ export async function GET(request, { params }) {
     response.cookies.delete(`nunes_state_${id}`);
     response.cookies.delete(`nunes_pkce_${id}`);
     return response;
-  } catch {
-    return NextResponse.redirect(new URL(`/connect/${config.label}?error=token-exchange`, publicOrigin(request)));
+  } catch (e) {
+    console.error("[OAUTH CALLBACK] unexpected failure", String(e?.message || e));
+    return NextResponse.redirect(id === "facebook"
+      ? metaTarget("callback-exception", e?.message || "Unexpected callback failure")
+      : new URL(`/connect/${config.label}?error=token-exchange`, publicOrigin(request)));
   }
 }
