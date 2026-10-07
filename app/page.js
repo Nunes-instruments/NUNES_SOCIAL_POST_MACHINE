@@ -192,7 +192,7 @@ export default function Home(){
       try{
         const r=await fetch("/api/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,channel:platform,text:drafts[platform],mediaUrl,angle,attachments})});
         const j=await r.json();
-        rr.push({platform,status:j.external?.status||(j.ok?"ARCHIVED":"FAILED"),error:j.external?.error||null});
+        rr.push({platform,status:j.external?.status||(j.ok?"ARCHIVED":"FAILED"),error:j.external?.error||null,technicalError:j.external?.technicalError||null,action:j.external?.action||null,externalId:j.external?.externalId||null});
       }catch{rr.push({platform,status:"FAILED"})}
     }
     setResults(rr); setTab("Results");
@@ -526,8 +526,21 @@ export default function Home(){
 
           {tab==="Results" && (
             <>
-              <div className="pageHeading"><div><span>RESULTS</span><h1>Publishing results</h1><p>Exact status returned for every selected network.</p></div></div>
-              <section className="panel">{results.length?results.map(r=><div className="resultRow" key={r.platform}><strong>{r.platform}</strong><span className={`pill ${r.status==="POSTED"?"ok":""}`}>{r.status}</span>{r.error&&<small>{r.error}</small>}</div>):<div className="empty">No posting run yet.</div>}</section>
+              <div className="pageHeading">
+                <div><span>RESULTS</span><h1>Publishing results</h1><p>{appMode==="admin"?"Clear publishing status and actions required.":"Provider status with technical diagnostics."}</p></div>
+              </div>
+              <section className="panel">
+                {results.length?results.map(r=><div className="resultRow resultRowAdvanced" key={r.platform}>
+                  <div>
+                    <strong>{r.platform}</strong>
+                    {r.externalId&&<small>Post ID: {r.externalId}</small>}
+                  </div>
+                  <span className={`pill ${r.status==="POSTED"?"ok":""}`}>{r.status}</span>
+                  {r.error&&<div className="resultMessage">{r.error}</div>}
+                  {r.action==="RECONNECT_META"&&<a className="secondaryBtn resultAction" href="/connect/Meta">Reconnect Meta</a>}
+                  {appMode==="tech"&&r.technicalError&&<details className="technicalResult"><summary>Technical details</summary><pre>{r.technicalError}</pre></details>}
+                </div>):<div className="empty">No posting run yet.</div>}
+              </section>
             </>
           )}
         </main>
