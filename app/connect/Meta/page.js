@@ -18,6 +18,10 @@ export default function MetaConnectPage(){
   const [oauthDetail,setOauthDetail]=useState("");
   const [viewMode,setViewMode]=useState("admin");
   const [fbHealth,setFbHealth]=useState(null);
+  const [testMediaUrl,setTestMediaUrl]=useState("");
+  const [testCaption,setTestCaption]=useState("NUNES Instagram connection test");
+  const [testResult,setTestResult]=useState("");
+  const [testBusy,setTestBusy]=useState(false);
 
   async function refresh(){
     const [r,sr]=await Promise.all([
@@ -63,6 +67,31 @@ export default function MetaConnectPage(){
     setWhatsappToken("");
     setMsg("Saved. Opening Meta authorization...");
     window.location.href=j.connectUrl;
+  }
+
+  async function testInstagram(){
+    if(!testMediaUrl.trim()){
+      setTestResult("Add a public HTTPS image/video URL first.");
+      return;
+    }
+    setTestBusy(true);
+    setTestResult("Verifying Instagram and publishing test post...");
+    try{
+      const r=await fetch("/api/meta/test-instagram",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({mediaUrl:testMediaUrl.trim(),caption:testCaption.trim()})
+      });
+      const j=await r.json().catch(()=>({}));
+      setTestResult(r.ok&&j.ok
+        ? `Posted successfully. Instagram media ID: ${j.mediaId}`
+        : (j.error || j.detail || "Instagram test post failed."));
+      await refresh();
+    }catch(e){
+      setTestResult(String(e?.message||"Instagram test post failed."));
+    }finally{
+      setTestBusy(false);
+    }
   }
 
   const fbSignedIn=fbHealth ? Boolean(fbHealth.signedIn) : Boolean(state?.facebook?.connected);
@@ -140,6 +169,24 @@ export default function MetaConnectPage(){
               <b>{wa?"✓":oauthCompleted?"!":"—"}</b>
             </div>
           </section>
+
+          {ig && <section className="connectCard" style={{marginBottom:18}}>
+            <div className="brandBubble metaBubble">◎</div>
+            <h2>Instagram Test Post</h2>
+            <p>Use one public HTTPS image or video URL. The server re-verifies the linked Instagram Professional account before publishing.</p>
+            <div className="apiSetupForm">
+              <label>Public media URL
+                <input value={testMediaUrl} onChange={e=>setTestMediaUrl(e.target.value)} placeholder="https://example.com/image.jpg"/>
+              </label>
+              <label>Test caption
+                <input value={testCaption} onChange={e=>setTestCaption(e.target.value)} placeholder="NUNES Instagram connection test"/>
+              </label>
+              <button className="primary wideBtn" type="button" onClick={testInstagram} disabled={testBusy}>
+                {testBusy?"Publishing...":"Publish Instagram Test"}
+              </button>
+              {testResult&&<div className="saveMsg">{testResult}</div>}
+            </div>
+          </section>}
 
           <section className="connectDashboardGrid">
             <article className="connectCard dashboardConnectCard">
