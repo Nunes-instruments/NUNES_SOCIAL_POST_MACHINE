@@ -222,3 +222,15 @@ button,.secondaryBtn{border:1px solid var(--line);background:#fff;color:var(--in
 .connectionPurposeRow{grid-template-columns:minmax(0,280px) minmax(260px,1fr) auto}
 .connectionPurpose strong{display:block;font-size:9px}.connectionPurpose span{display:block;color:var(--muted);font-size:8px;line-height:1.4;margin-top:2px}
 @media(max-width:900px){.connectionPurposeRow{grid-template-columns:1fr}.globalMode{display:none}}
+
+
+/* Publishing diagnostics */
+.resultRowAdvanced{grid-template-columns:minmax(160px,.8fr) auto minmax(280px,1.6fr) auto;align-items:center;gap:12px;padding:14px 0}
+.resultRowAdvanced>div:first-child small{display:block;margin-top:4px}
+.resultMessage{font-size:9px;line-height:1.5;color:#536174;background:#f7f9fb;border:1px solid #e7edf2;border-radius:8px;padding:9px 10px}
+.resultAction{margin:0;font-size:8px;white-space:nowrap}
+.technicalResult{grid-column:1/-1;border:1px solid #dfe6ed;border-radius:8px;padding:8px 10px;background:#fbfcfd}
+.technicalResult summary{cursor:pointer;font-size:8px;font-weight:800;color:#586678}
+.technicalResult pre{white-space:pre-wrap;word-break:break-word;font-size:8px;line-height:1.45;color:#6a3940;background:#fff5f5;border-radius:7px;padding:9px;margin:8px 0 0}
+.metaModeSwitch{margin:0 0 12px}
+@media(max-width:850px){.resultRowAdvanced{grid-template-columns:1fr auto}.resultMessage,.resultAction{grid-column:1/-1}}
