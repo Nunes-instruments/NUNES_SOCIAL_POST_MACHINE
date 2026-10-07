@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { OAUTH, envReady } from "../../../lib/oauth-config";
+import { OAUTH, envReady, ENABLED_SOCIAL_PROVIDER_IDS } from "../../../lib/oauth-config";
 import { cookieName, unseal, readConfig, secretFromJar } from "../../../lib/oauth-store";
 import { getSharedState, setSharedState, sharedStateReady } from "../../../lib/shared-state";
 
@@ -52,6 +52,7 @@ export async function GET() {
   const integrations = {};
 
   for (const [id, cfg] of Object.entries(OAUTH)) {
+    if (!ENABLED_SOCIAL_PROVIDER_IDS.includes(id)) continue;
     const browserToken = unseal(jar.get(cookieName(cfg.label))?.value, secretFromJar(jar));
     const browserConfig = readConfig(jar,id);
 
@@ -93,27 +94,23 @@ export async function GET() {
     }
   }
 
-  const waToken = await getSharedState("token:whatsapp");
-  const waConfig = await getSharedState("config:whatsapp");
+  const [waToken,waConfig,waNumbersRaw] = await Promise.all([
+    getSharedState("token:whatsapp"),
+    getSharedState("config:whatsapp"),
+    getSharedState("whatsapp:numbers")
+  ]);
+  const waNumbers = Array.isArray(waNumbersRaw) ? waNumbersRaw : [];
+  const legacyConnected = Boolean(waToken?.access_token && waConfig?.accountId);
+  const numbersConnected = waNumbers.filter(n=>n?.enabled!==false && n?.phoneNumberId && (n?.accessToken || waToken?.access_token)).length || (legacyConnected ? 1 : 0);
   integrations.WhatsApp = {
-    connected: Boolean(waToken?.access_token && waConfig?.accountId),
+    connected: numbersConnected > 0,
     configured: Boolean(waConfig?.clientId && waConfig?.clientSecret),
-    mode: waToken?.access_token && waConfig?.accountId
-      ? "connected"
-      : waConfig?.clientId && waConfig?.clientSecret
-        ? "ready-to-login"
-        : "app-setup-required",
+    mode: numbersConnected > 0 ? "connected" : waConfig?.clientId && waConfig?.clientSecret ? "ready-to-login" : "not-connected",
     phoneNumberId: waConfig?.accountId || "",
     wabaId: waConfig?.secondaryId || "",
-    phone: waConfig?.phone || ""
-  };
-
-  integrations.Bluesky = {
-    connected: Boolean(process.env.BLUESKY_IDENTIFIER && process.env.BLUESKY_APP_PASSWORD),
-    configured: true,
-    mode: process.env.BLUESKY_IDENTIFIER && process.env.BLUESKY_APP_PASSWORD
-      ? "connected"
-      : "manual-login-available"
+    phone: waConfig?.phone || "",
+    numbersConnected,
+    numbersConfigured: waNumbers.length || (waConfig?.accountId ? 1 : 0)
   };
 
   return Response.json({ ok: true, n8nRequired: false, secureStorageReady: true, secureStorageMode: sharedStateReady() ? "shared-server-encrypted" : "browser-encrypted", integrations });
