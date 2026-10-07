@@ -15,15 +15,15 @@ const PLATFORMS = [
 ];
 
 const PLATFORM_META = {
-  LinkedIn:{note:"Professional post",caps:["Text","Image","Link"]},
-  Facebook:{note:"Page publishing",caps:["Text","Image","Video"]},
-  Instagram:{note:"Professional account",caps:["Image","Reel","Caption"]},
-  Threads:{note:"Conversation post",caps:["Text","Media"]},
-  X:{note:"Short-form update",caps:["Text","Media"]},
-  Bluesky:{note:"Community update",caps:["Text"]},
-  Pinterest:{note:"Visual discovery",caps:["Image","Pin"]},
-  TikTok:{note:"Short video / photo",caps:["Video","Photo"]},
-  YouTube:{note:"Video publishing",caps:["Video"]}
+  LinkedIn:{note:"B2B authority & decision-makers",purpose:"Professional credibility, industry insights, product expertise and lead generation.",template:"Hook → business problem → expert insight → proof/value → CTA",caps:["Text","Image","Link"]},
+  Facebook:{note:"Community & customer trust",purpose:"Company updates, offers, service stories, products and broad customer engagement.",template:"Friendly opener → benefit → practical details → CTA",caps:["Text","Image","Video"]},
+  Instagram:{note:"Visual brand & product discovery",purpose:"Product visuals, reels, behind-the-scenes, applications and brand awareness.",template:"Visual hook → short benefit → application → CTA → hashtags",caps:["Image","Reel","Caption"]},
+  Threads:{note:"Conversation & quick expertise",purpose:"Short discussions, opinions, tips and conversational updates.",template:"One strong thought → context → question/CTA",caps:["Text","Media"]},
+  X:{note:"Fast industry updates",purpose:"Concise news, product updates, quick tips and time-sensitive announcements.",template:"Headline → key fact → short CTA",caps:["Text","Media"]},
+  Bluesky:{note:"Community-led updates",purpose:"Natural updates and community conversation.",template:"Human update → useful point → invitation to respond",caps:["Text"]},
+  Pinterest:{note:"Evergreen visual discovery",purpose:"Searchable visual content, product/application inspiration and long-tail discovery.",template:"Search-friendly title → benefit → use case → save/contact CTA",caps:["Image","Pin"]},
+  TikTok:{note:"Short-form reach",purpose:"Quick demos, instrument tips, applications, before/after and educational video content.",template:"3-second hook → demo/value → result → CTA",caps:["Video","Photo"]},
+  YouTube:{note:"Deep education & demos",purpose:"Product demonstrations, tutorials, comparisons and searchable technical education.",template:"Search title → problem → demo/explanation → takeaway → CTA",caps:["Video"]}
 };
 
 const ANGLES = ["AUTO — Choose Best Angle","Educational","Problem / Solution","Industry Insight","Behind the Scenes","Product Spotlight","Buyer Question","How-To","Common Mistake","Quick Tip","New Arrival","Customer Problem","Comparison","FAQ","Company Update"];
@@ -79,6 +79,7 @@ export default function Home(){
   const [attachments,setAttachments]=useState([]);
   const [uploading,setUploading]=useState(false);
   const [uploadError,setUploadError]=useState("");
+  const [appMode,setAppMode]=useState("admin");
   const fileInputRef=useRef(null);
   const imageInputRef=useRef(null);
 
@@ -229,6 +230,10 @@ export default function Home(){
         <header className="workspaceTop">
           <div className="searchBox">⌕<input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")runSearch()}} placeholder="Search anything..."/></div>
           <div className="topActions">
+            <div className="modeSwitch globalMode">
+              <button className={appMode==="admin"?"active":""} onClick={()=>setAppMode("admin")}>Admin</button>
+              <button className={appMode==="tech"?"active":""} onClick={()=>setAppMode("tech")}>Tech</button>
+            </div>
             <button className="quickCreate" onClick={()=>setTab("Create Post")}>＋ Quick Create</button>
             <button className="iconBtn" title="Publishing results" onClick={()=>setTab("Results")}>✓</button>
             <button className="iconBtn" title="Social connections" onClick={()=>setTab("Connections")}>◎</button>
@@ -356,6 +361,10 @@ export default function Home(){
                           </span>
                           <span className={connected?"statusDot connected":"statusDot"}>{connected?"Connected":"Not connected"}</span>
                         </button>
+                        <div className="platformPurpose">
+                          <strong>Purpose</strong><span>{meta.purpose}</span>
+                          <strong>Template</strong><span>{meta.template}</span>
+                        </div>
                         <div className="capRow">{meta.caps.map(cap=><span key={cap}>{cap}</span>)}</div>
                         <div className="platformFooter">
                           <button className="selectBtn" onClick={()=>setSelected(s=>s.includes(name)?s.filter(x=>x!==name):[...s,name])}>{isSelected?"Selected ✓":"Select"}</button>
@@ -487,7 +496,7 @@ export default function Home(){
             <>
               <div className="pageHeading"><div><span>SOCIAL NETWORKS</span><h1>Connect your accounts</h1><p>Direct OAuth/API connection. n8n is not required.</p></div><button onClick={refreshConnections}>Refresh</button></div>
               <section className="accounts modernAccounts">
-                <div className="important"><strong>Secure connection</strong><span>Use each provider's official authorization flow. API credentials can be saved from the platform setup page.</span></div>
+                <div className="important"><strong>{appMode==="admin"?"Admin View":"Tech View"}</strong><span>{appMode==="admin"?"Simple account status and management. API credentials stay hidden once an account is connected.":"Technical provider setup, reconnect and diagnostics remain available when needed."}</span></div>
 
                 <a className="metaUnifiedCard" href="/connect/Meta">
                   <div className="metaUnifiedIcon">M</div>
@@ -503,7 +512,14 @@ export default function Home(){
                   <b>Open →</b>
                 </a>
 
-                <div className="loginList">{PLATFORMS.map(([name,icon])=><div className="loginRow" key={name}><a className={`socialLogin ${name.toLowerCase()}`} href={`/connect/${encodeURIComponent(name)}`}><span>{icon}</span>{connections[name]?.connected?"Manage":"Connect"} {name}</a><span className={connections[name]?.connected?"pill ok":"pill"}>{connections[name]?.mode||"not-connected"}</span></div>)}</div>
+                <div className="loginList">{PLATFORMS.map(([name,icon])=>{
+                  const meta=PLATFORM_META[name]||{};
+                  return <div className="loginRow connectionPurposeRow" key={name}>
+                    <a className={`socialLogin ${name.toLowerCase()}`} href={(name==="Facebook"||name==="Instagram")?"/connect/Meta":`/connect/${encodeURIComponent(name)}`}><span>{icon}</span>{connections[name]?.connected?"Manage":"Connect"} {name}</a>
+                    <div className="connectionPurpose"><strong>{meta.note}</strong><span>{meta.purpose}</span></div>
+                    <span className={connections[name]?.connected?"pill ok":"pill"}>{connections[name]?.connected?"connected":connections[name]?.mode||"not-connected"}</span>
+                  </div>
+                })}</div>
               </section>
             </>
           )}
