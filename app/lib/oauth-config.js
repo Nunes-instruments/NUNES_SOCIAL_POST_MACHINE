@@ -1,3 +1,5 @@
+import { ENABLED_SOCIAL_PROVIDERS } from "./social-providers";
+
 export const OAUTH = {
   linkedin: {
     label: "LinkedIn",
@@ -46,7 +48,7 @@ export function envReady(id) {
 }
 
 
-export const ENABLED_SOCIAL_PROVIDER_IDS = ["linkedin","facebook","instagram","youtube"];
+export const ENABLED_SOCIAL_PROVIDER_IDS = ENABLED_SOCIAL_PROVIDERS.filter(id=>id!=="whatsapp");
 export const ENABLED_SOCIAL_CHANNELS = ["LinkedIn","Facebook","Instagram","YouTube","WhatsApp"];
 
 export function isEnabledSocialProvider(id){
