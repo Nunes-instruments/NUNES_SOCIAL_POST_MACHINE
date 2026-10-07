@@ -83,3 +83,11 @@ export function envReady(id) {
   const c = OAUTH[id];
   return Boolean(c && process.env[c.clientId] && process.env[c.clientSecret]);
 }
+
+
+export const ENABLED_SOCIAL_PROVIDER_IDS = ["linkedin","facebook","instagram","youtube"];
+export const ENABLED_SOCIAL_CHANNELS = ["LinkedIn","Facebook","Instagram","YouTube","WhatsApp"];
+
+export function isEnabledSocialProvider(id){
+  return ENABLED_SOCIAL_PROVIDER_IDS.includes(String(id||"").toLowerCase());
+}
