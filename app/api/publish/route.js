@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { put } from "@vercel/blob";
 import { cookieName, unseal, readConfig, secretFromJar } from "../../lib/oauth-store";
-import { getSharedState } from "../../lib/shared-state";
+import { getSharedState, setSharedState } from "../../lib/shared-state";
 
 export const runtime = "nodejs";
 
@@ -32,6 +32,12 @@ async function archive(body, external) {
     publishedAt: new Date().toISOString(),
     external
   };
+
+  try {
+    const history = (await getSharedState("history:posts")) || [];
+    const next = [post, ...(Array.isArray(history) ? history : [])].slice(0,250);
+    await setSharedState("history:posts", next);
+  } catch {}
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) return { ...post, url: null };
 
