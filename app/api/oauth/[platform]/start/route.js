@@ -38,7 +38,12 @@ export async function GET(request, { params }) {
   url.searchParams.set(config.clientKey, clientId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", config.scope);
+  if (id === "facebook" && saved?.configId) {
+    url.searchParams.set("config_id", saved.configId);
+    url.searchParams.set("override_default_response_type", "true");
+  } else {
+    url.searchParams.set("scope", config.scope);
+  }
   url.searchParams.set("state", state);
 
   if (config.google) {
