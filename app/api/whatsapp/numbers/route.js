@@ -15,6 +15,13 @@ function sanitizeNumber(n){
   };
 }
 
+async function validateNumber(phoneNumberId, accessToken){
+  const r=await fetch(`https://graph.facebook.com/v24.0/${encodeURIComponent(phoneNumberId)}?fields=id,display_phone_number,verified_name&access_token=${encodeURIComponent(accessToken)}`,{cache:"no-store"});
+  const j=await r.json().catch(e=>({parseError:String(e?.message||e)}));
+  if(!r.ok || !j?.id) throw new Error(j?.error?.message||"Meta could not validate this WhatsApp phone number.");
+  return j;
+}
+
 async function loadNumbers(){
   const [stored,legacyCfg,legacyToken]=await Promise.all([
     getSharedState("whatsapp:numbers"),
@@ -72,7 +79,7 @@ export async function POST(request){
       return Response.json({ok:true});
     }
 
-    const entry=sanitizeNumber({
+    const candidate=sanitizeNumber({
       id:body.id||undefined,
       label:body.label,
       displayPhone:body.displayPhone,
@@ -82,9 +89,23 @@ export async function POST(request){
       enabled:true
     });
 
-    if(!entry.label||!entry.phoneNumberId){
+    if(!candidate.label||!candidate.phoneNumberId){
       return Response.json({ok:false,error:"Business label and WhatsApp Phone Number ID are required."},{status:400});
     }
+
+    const sharedToken=await getSharedState("token:whatsapp");
+    const validationToken=candidate.accessToken||sharedToken?.access_token||"";
+    if(!validationToken){
+      return Response.json({ok:false,error:"A valid WhatsApp access token is required to verify this number."},{status:400});
+    }
+    const meta=await validateNumber(candidate.phoneNumberId,validationToken);
+    const entry={
+      ...candidate,
+      displayPhone:meta.display_phone_number||candidate.displayPhone,
+      accessToken:candidate.accessToken||"",
+      verifiedName:meta.verified_name||"",
+      validatedAt:new Date().toISOString()
+    };
 
     const existingIndex=numbers.findIndex(n=>n.id===entry.id || (entry.phoneNumberId && n.phoneNumberId===entry.phoneNumberId));
     if(existingIndex>=0){
