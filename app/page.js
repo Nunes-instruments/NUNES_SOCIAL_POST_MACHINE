@@ -203,6 +203,7 @@ export default function Home(){
 
         <div className="sideGroupLabel">SOCIAL</div>
         <nav className="sideNav secondary">
+          <button onClick={()=>{window.location.href="/accounts"}}><span>◎</span>Accounts Hub</button>
           <button onClick={()=>setTab("Connections")}><span>↗</span>Social Networks</button>
           <button onClick={()=>setTab("Create Post")}><span>▤</span>Content</button>
           <button onClick={()=>setTab("Preview")}><span>➤</span>Publishing</button>
