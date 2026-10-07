@@ -167,3 +167,20 @@ button,.secondaryBtn{border:1px solid var(--line);background:#fff;color:var(--in
 .removeAttachment{width:26px;height:26px;padding:0;border:0;background:#fff0f0;color:#bd4545;border-radius:50%;font-size:16px;line-height:1}
 .advancedMediaUrl{margin-top:10px}
 @media(max-width:760px){.pasteDropZone{grid-template-columns:36px 1fr}.uploadActions{grid-column:1/-1}.attachmentHead{flex-direction:column}}
+
+.metaUnifiedCard{display:grid;grid-template-columns:44px 1fr auto auto;align-items:center;gap:12px;text-decoration:none;border:1px solid #cfdcf0;background:linear-gradient(135deg,#f7f9ff,#fff);padding:12px;border-radius:12px;margin-bottom:12px;color:var(--ink)}
+.metaUnifiedCard:hover{border-color:#8ca8df;box-shadow:0 5px 18px rgba(70,86,160,.08)}
+.metaUnifiedIcon,.metaBubble{background:linear-gradient(135deg,#1877F2,#9c3cff);color:#fff}
+.metaUnifiedIcon{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-weight:900}
+.metaUnifiedCard strong{display:block;font-size:11px}.metaUnifiedCard>div>span{display:block;color:var(--muted);font-size:8px;margin-top:2px}
+.metaMiniStatuses{display:flex;gap:5px;flex-wrap:wrap}.metaMiniStatuses span{font-size:7px;padding:4px 6px;border-radius:999px;background:#f2f4f7;color:#7a8798}.metaMiniStatuses span.ok{background:#eaf9f1;color:#158a5a}
+.metaUnifiedCard>b{font-size:9px;color:#4b67b0}
+.metaStatusGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.metaServiceCard{display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px}
+.metaServiceCard.connected{border-color:#bfe7d2;background:#fbfffd}.metaServiceCard strong{display:block;font-size:10px}.metaServiceCard span,.metaServiceCard small{display:block;font-size:8px;color:var(--muted);margin-top:2px}.metaServiceCard>b{color:#20a468}
+.metaServiceIcon{width:36px;height:36px;border-radius:9px;color:#fff;display:grid;place-items:center;font-size:10px;font-weight:900}.metaServiceIcon.fb{background:#1877F2}.metaServiceIcon.ig{background:linear-gradient(135deg,#833AB4,#E1306C,#F77737)}.metaServiceIcon.wa{background:#25D366}
+.metaLogin{background:linear-gradient(90deg,#1877F2,#7f4de3)}
+.metaOptionalTitle{font-size:9px;font-weight:900;color:#5c6e82;border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.advancedMeta{border:1px solid var(--line);border-radius:8px;padding:10px;margin:12px 0;background:#fff}.advancedMeta summary{cursor:pointer;font-size:9px;font-weight:800;color:#566174}
+.metaPerms{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;display:flex;gap:6px;flex-wrap:wrap}.metaPerms strong{width:100%;font-size:9px;margin-bottom:2px}.metaPerms span{font-size:7px;padding:5px 6px;border-radius:999px;background:#f2f6ff;color:#536ba5}
+@media(max-width:900px){.metaStatusGrid{grid-template-columns:1fr}.metaUnifiedCard{grid-template-columns:40px 1fr}.metaMiniStatuses,.metaUnifiedCard>b{grid-column:2}}
