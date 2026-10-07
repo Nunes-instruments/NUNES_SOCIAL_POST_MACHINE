@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 export default function MetaConnectPage(){
-  const qs=useSearchParams();
   const [state,setState]=useState(null);
   const [clientId,setClientId]=useState("");
   const [clientSecret,setClientSecret]=useState("");
@@ -14,6 +12,7 @@ export default function MetaConnectPage(){
   const [phoneNumberId,setPhoneNumberId]=useState("");
   const [whatsappToken,setWhatsappToken]=useState("");
   const [msg,setMsg]=useState("");
+  const [oauthCompleted,setOauthCompleted]=useState(false);
 
   async function refresh(){
     const r=await fetch("/api/meta/setup",{cache:"no-store"});
@@ -25,7 +24,10 @@ export default function MetaConnectPage(){
     if(j.whatsapp?.phoneNumberId) setPhoneNumberId(j.whatsapp.phoneNumberId);
   }
 
-  useEffect(()=>{refresh()},[]);
+  useEffect(()=>{
+    refresh();
+    if(typeof window!=="undefined") setOauthCompleted(new URLSearchParams(window.location.search).get("connected")==="1");
+  },[]);
 
   async function saveAndConnect(e){
     e.preventDefault();
@@ -86,7 +88,7 @@ export default function MetaConnectPage(){
             <span className={connectedCount===3?"pill ok":"pill"}>{connectedCount}/3 CONNECTED</span>
           </div>
 
-          {qs.get("connected")==="1" && <div className="important"><strong>Meta authorization completed</strong><span>NUNES has refreshed Facebook, Instagram and WhatsApp assets that Meta allowed this app to access.</span></div>}
+          {oauthCompleted && <div className="important"><strong>Meta authorization completed</strong><span>NUNES has refreshed Facebook, Instagram and WhatsApp assets that Meta allowed this app to access.</span></div>}
 
           <section className="metaStatusGrid">
             <div className={fb?"metaServiceCard connected":"metaServiceCard"}>
