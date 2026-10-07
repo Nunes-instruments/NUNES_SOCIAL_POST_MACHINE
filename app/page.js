@@ -377,6 +377,21 @@ export default function Home(){
               <div className="pageHeading"><div><span>SOCIAL NETWORKS</span><h1>Connect your accounts</h1><p>Direct OAuth/API connection. n8n is not required.</p></div><button onClick={refreshConnections}>Refresh</button></div>
               <section className="accounts modernAccounts">
                 <div className="important"><strong>Secure connection</strong><span>Use each provider's official authorization flow. API credentials can be saved from the platform setup page.</span></div>
+
+                <a className="metaUnifiedCard" href="/connect/Meta">
+                  <div className="metaUnifiedIcon">M</div>
+                  <div>
+                    <strong>Connect Meta Business</strong>
+                    <span>Facebook + Instagram + WhatsApp in one setup</span>
+                  </div>
+                  <div className="metaMiniStatuses">
+                    <span className={connections.Facebook?.connected?"ok":""}>Facebook</span>
+                    <span className={connections.Instagram?.connected?"ok":""}>Instagram</span>
+                    <span className={connections.WhatsApp?.connected?"ok":""}>WhatsApp</span>
+                  </div>
+                  <b>Open →</b>
+                </a>
+
                 <div className="loginList">{PLATFORMS.map(([name,icon])=><div className="loginRow" key={name}><a className={`socialLogin ${name.toLowerCase()}`} href={`/connect/${encodeURIComponent(name)}`}><span>{icon}</span>{connections[name]?.connected?"Manage":"Connect"} {name}</a><span className={connections[name]?.connected?"pill ok":"pill"}>{connections[name]?.mode||"not-connected"}</span></div>)}</div>
               </section>
             </>
