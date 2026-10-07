@@ -105,7 +105,7 @@ export default function MetaConnectPage(){
             <span className={connectedCount===3?"pill ok":"pill"}>{connectedCount}/3 CONNECTED</span>
           </div>
 
-          {oauthCompleted && <div className="important"><strong>Meta authorization completed</strong><span>NUNES has refreshed Facebook, Instagram and WhatsApp assets that Meta allowed this app to access.</span></div>}
+          {oauthCompleted && <div className={fb||ig||wa?"important":"warning"}><strong>{fb||ig||wa?"Meta authorization returned — verified server status loaded":"Meta authorization returned — verification still required"}</strong><span>{fb||ig||wa?"Only resources verified by the server are marked Connected below.":"The OAuth redirect alone is not treated as a connection. Check the service cards and action-required message below."}</span></div>}
           <div className="modeSwitch metaModeSwitch">
             <button className={viewMode==="admin"?"active":""} onClick={()=>setViewMode("admin")}>Admin View</button>
             <button className={viewMode==="tech"?"active":""} onClick={()=>setViewMode("tech")}>Tech View</button>
@@ -118,26 +118,26 @@ export default function MetaConnectPage(){
           {oauthError && <div className="warning metaError"><strong>Meta connection failed: {oauthError}</strong><span>{oauthDetail || "Retry after checking the Meta configuration and app permissions."}</span></div>}
 
           <section className="metaStatusGrid">
-            <div className={fb?"metaServiceCard connected":"metaServiceCard"}>
+            <div className={fbReady?"metaServiceCard connected":fbSignedIn?"metaServiceCard attention":"metaServiceCard"}>
               <div className="metaServiceIcon fb">f</div>
               <div>
                 <strong>Facebook</strong>
-                <span>{fbSignedIn?"Signed in & saved":state?.facebook?.pageId?"Configured":"Not connected"}</span>
+                <span>{fbReady?"Connected":fbSignedIn?"Needs attention":state?.facebook?.pageId?"Configured":"Not connected"}</span>
                 {state?.facebook?.name&&<small>{state.facebook.name}</small>}
                 {fbSignedIn&&!fbReady&&<small>Publishing: action required</small>}
                 {fbReady&&<small>Publishing: ready</small>}
               </div>
-              <b>{fbSignedIn?"✓":"—"}</b>
+              <b>{fbReady?"✓":fbSignedIn?"!":"—"}</b>
             </div>
-            <div className={ig?"metaServiceCard connected":"metaServiceCard"}>
+            <div className={ig?"metaServiceCard connected":oauthCompleted?"metaServiceCard attention":"metaServiceCard"}>
               <div className="metaServiceIcon ig">◎</div>
-              <div><strong>Instagram</strong><span>{ig?"Connected":state?.instagram?.userId?"Configured":"Not connected"}</span>{state?.instagram?.name&&<small>@{state.instagram.name}</small>}</div>
-              <b>{ig?"✓":"—"}</b>
+              <div><strong>Instagram</strong><span>{ig?"Connected":oauthCompleted?"Needs attention":state?.instagram?.userId?"Configured":"Not connected"}</span>{state?.instagram?.name&&<small>@{state.instagram.name}</small>}</div>
+              <b>{ig?"✓":oauthCompleted?"!":"—"}</b>
             </div>
-            <div className={wa?"metaServiceCard connected":"metaServiceCard"}>
+            <div className={wa?"metaServiceCard connected":oauthCompleted?"metaServiceCard attention":"metaServiceCard"}>
               <div className="metaServiceIcon wa">WA</div>
-              <div><strong>WhatsApp</strong><span>{wa?"Connected":state?.whatsapp?.phoneNumberId?"Configured":"Not connected"}</span>{state?.whatsapp?.phone&&<small>{state.whatsapp.phone}</small>}</div>
-              <b>{wa?"✓":"—"}</b>
+              <div><strong>WhatsApp</strong><span>{wa?"Connected":oauthCompleted?"Needs attention":state?.whatsapp?.phoneNumberId?"Configured":"Not connected"}</span>{state?.whatsapp?.phone&&<small>{state.whatsapp.phone}</small>}</div>
+              <b>{wa?"✓":oauthCompleted?"!":"—"}</b>
             </div>
           </section>
 
