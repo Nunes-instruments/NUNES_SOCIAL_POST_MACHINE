@@ -6,6 +6,7 @@ export default function MetaConnectPage(){
   const [state,setState]=useState(null);
   const [clientId,setClientId]=useState("");
   const [clientSecret,setClientSecret]=useState("");
+  const [configId,setConfigId]=useState("");
   const [facebookPageId,setFacebookPageId]=useState("");
   const [instagramUserId,setInstagramUserId]=useState("");
   const [wabaId,setWabaId]=useState("");
@@ -36,7 +37,7 @@ export default function MetaConnectPage(){
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
-        clientId,clientSecret,facebookPageId,instagramUserId,wabaId,phoneNumberId,whatsappToken
+        clientId,clientSecret,configId,facebookPageId,instagramUserId,wabaId,phoneNumberId,whatsappToken
       })
     });
     const j=await r.json().catch(()=>({}));
@@ -121,6 +122,9 @@ export default function MetaConnectPage(){
                 <label>Meta App Secret
                   <input type="password" value={clientSecret} onChange={e=>setClientSecret(e.target.value)} placeholder="Paste Meta App Secret" required/>
                 </label>
+                <label>Facebook Login for Business Configuration ID
+                  <input value={configId} onChange={e=>setConfigId(e.target.value)} placeholder="Paste Configuration ID from Facebook Login for Business → Configurations" required/>
+                </label>
 
                 <div className="metaOptionalTitle">Optional IDs — leave blank for auto-detection</div>
                 <label>Facebook Page ID
@@ -162,7 +166,7 @@ export default function MetaConnectPage(){
               </div>
 
               <div className="metaPerms">
-                <strong>Permissions NUNES requests</strong>
+                <strong>Add these permissions inside the Meta Business Login configuration</strong>
                 <span>pages_show_list</span>
                 <span>pages_read_engagement</span>
                 <span>pages_manage_posts</span>
