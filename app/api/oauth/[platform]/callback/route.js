@@ -113,10 +113,114 @@ export async function GET(request, { params }) {
       createdAt: Date.now()
     };
 
-    const response = NextResponse.redirect(new URL(`/connect/${config.label}?connected=1`, publicOrigin(request)));
+    if (id === "facebook") {
+      try {
+        const pagesRes = await fetch(
+          "https://graph.facebook.com/v24.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=" +
+          encodeURIComponent(data.access_token),
+          { cache: "no-store" }
+        );
+        const pagesJson = await pagesRes.json().catch(()=>({}));
+        const pages = Array.isArray(pagesJson.data) ? pagesJson.data : [];
+        const page = pages[0] || null;
+
+        if (page) {
+          const existingFb = (await getSharedState("config:facebook")) || {};
+          await setSharedState("config:facebook", {
+            ...existingFb,
+            platform:"facebook",
+            accountId: page.id || existingFb.accountId || "",
+            name: page.name || existingFb.name || "",
+            savedAt: Date.now()
+          });
+
+          if (page.instagram_business_account?.id) {
+            const igId = page.instagram_business_account.id;
+            const existingIg = (await getSharedState("config:instagram")) || {};
+            let igName = "";
+            try {
+              const igRes = await fetch(
+                `https://graph.facebook.com/v24.0/${igId}?fields=id,username&access_token=${encodeURIComponent(page.access_token || data.access_token)}`,
+                { cache:"no-store" }
+              );
+              const igJson = await igRes.json().catch(()=>({}));
+              igName = igJson.username || "";
+            } catch {}
+
+            await setSharedState("config:instagram", {
+              ...existingIg,
+              platform:"instagram",
+              accountId:igId,
+              secondaryId:page.id || "",
+              name:igName,
+              savedAt:Date.now()
+            });
+
+            await setSharedState("token:instagram", {
+              ...payload,
+              platform:"Instagram",
+              access_token:page.access_token || data.access_token
+            });
+          }
+        }
+
+        let businesses = [];
+        try {
+          const bizRes = await fetch(
+            "https://graph.facebook.com/v24.0/me/businesses?fields=id,name&access_token=" +
+            encodeURIComponent(data.access_token),
+            { cache:"no-store" }
+          );
+          const bizJson = await bizRes.json().catch(()=>({}));
+          businesses = Array.isArray(bizJson.data) ? bizJson.data : [];
+        } catch {}
+
+        for (const biz of businesses) {
+          try {
+            const wabaRes = await fetch(
+              `https://graph.facebook.com/v24.0/${biz.id}/owned_whatsapp_business_accounts?fields=id,name&access_token=${encodeURIComponent(data.access_token)}`,
+              { cache:"no-store" }
+            );
+            const wabaJson = await wabaRes.json().catch(()=>({}));
+            const waba = Array.isArray(wabaJson.data) ? wabaJson.data[0] : null;
+            if (!waba?.id) continue;
+
+            const phoneRes = await fetch(
+              `https://graph.facebook.com/v24.0/${waba.id}/phone_numbers?fields=id,display_phone_number,verified_name&access_token=${encodeURIComponent(data.access_token)}`,
+              { cache:"no-store" }
+            );
+            const phoneJson = await phoneRes.json().catch(()=>({}));
+            const phone = Array.isArray(phoneJson.data) ? phoneJson.data[0] : null;
+
+            const existingWa = (await getSharedState("config:whatsapp")) || {};
+            await setSharedState("config:whatsapp", {
+              ...existingWa,
+              platform:"whatsapp",
+              accountId:phone?.id || existingWa.accountId || "",
+              secondaryId:waba.id,
+              name:waba.name || existingWa.name || "",
+              phone:phone?.display_phone_number || "",
+              verifiedName:phone?.verified_name || "",
+              savedAt:Date.now()
+            });
+
+            await setSharedState("token:whatsapp", {
+              ...payload,
+              platform:"WhatsApp"
+            });
+            break;
+          } catch {}
+        }
+      } catch {}
+    }
+
+    const response = NextResponse.redirect(new URL(id === "facebook" ? "/connect/Meta?connected=1" : `/connect/${config.label}?connected=1`, publicOrigin(request)));
     const secret = secretFromJar(request.cookies);
     if (!secret) return NextResponse.redirect(new URL(`/connect/${config.label}?error=secure-session-missing`, publicOrigin(request)));
     await setSharedState(`token:${id}`,payload);
+    if (id === "facebook") {
+      await setSharedState("token:facebook",payload);
+    }
     response.cookies.set(cookieName(config.label), seal(payload, secret), COOKIE_OPTIONS);
     response.cookies.delete(`nunes_state_${id}`);
     response.cookies.delete(`nunes_pkce_${id}`);
