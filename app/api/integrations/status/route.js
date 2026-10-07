@@ -31,6 +31,21 @@ export async function GET() {
     };
   }
 
+  const waToken = await getSharedState("token:whatsapp");
+  const waConfig = await getSharedState("config:whatsapp");
+  integrations.WhatsApp = {
+    connected: Boolean(waToken?.access_token && waConfig?.accountId),
+    configured: Boolean(waConfig?.clientId && waConfig?.clientSecret),
+    mode: waToken?.access_token && waConfig?.accountId
+      ? "connected"
+      : waConfig?.clientId && waConfig?.clientSecret
+        ? "ready-to-login"
+        : "app-setup-required",
+    phoneNumberId: waConfig?.accountId || "",
+    wabaId: waConfig?.secondaryId || "",
+    phone: waConfig?.phone || ""
+  };
+
   integrations.Bluesky = {
     connected: Boolean(process.env.BLUESKY_IDENTIFIER && process.env.BLUESKY_APP_PASSWORD),
     configured: true,
