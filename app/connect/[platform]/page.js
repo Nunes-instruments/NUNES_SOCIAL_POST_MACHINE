@@ -53,6 +53,7 @@ export default function ConnectPlatform() {
   const [clientSecret,setClientSecret]=useState("");
   const [accountId,setAccountId]=useState("");
   const [saveMsg,setSaveMsg]=useState("");
+  const [viewMode,setViewMode]=useState("admin");
 
   async function refresh() {
     const r = await fetch("/api/integrations/status", { cache: "no-store" });
@@ -125,11 +126,23 @@ export default function ConnectPlatform() {
               <h2>{platform} connection</h2>
               <p>Use the official provider authorization so NUNES can publish approved posts directly.</p>
 
-              {error === "app-not-configured" && (
-                <div className="warning"><strong>API setup required</strong><span>Paste the Client ID and Client Secret below, save them, then connect securely.</span></div>
+              <div className="modeSwitch">
+                <button className={viewMode==="admin"?"active":""} onClick={()=>setViewMode("admin")}>Admin View</button>
+                <button className={viewMode==="tech"?"active":""} onClick={()=>setViewMode("tech")}>Tech View</button>
+              </div>
+
+              {connected && viewMode==="admin" && (
+                <div className="connectedSummary">
+                  <div className="connectedCheck">✓</div>
+                  <div><strong>{platform} is connected</strong><span>NUNES can use this account from the shared server connection. API credentials are hidden in Admin View.</span></div>
+                </div>
               )}
 
-                            {platform !== "Bluesky" && (
+              {!connected && error === "app-not-configured" && (
+                <div className="warning"><strong>API setup required</strong><span>Open Tech View, enter the provider credentials once, then authorize the account.</span></div>
+              )}
+
+              {viewMode==="tech" && platform !== "Bluesky" && (
                 <form className="apiSetupForm" onSubmit={saveApiSetup}>
                   <h3>API Setup</h3>
                   <label>Client ID / App ID<input value={clientId} onChange={e=>setClientId(e.target.value)} placeholder="Paste Client ID / App ID" required /></label>
@@ -140,7 +153,13 @@ export default function ConnectPlatform() {
                 </form>
               )}
 
-              {platform === "Bluesky" ? (
+              {connected && viewMode==="admin" ? (
+                <>
+                  <a className="loginBtn" style={{ background: meta.color }} href={`/api/oauth/${platform.toLowerCase()}/start`}>Reconnect {platform}</a>
+                  <a className="secondaryBtn wideBtn" href="/" >Back to Accounts Hub</a>
+                  <button className="secondaryBtn" onClick={refresh}>Refresh status</button>
+                </>
+              ) : platform === "Bluesky" ? (
                 <div className="warning"><strong>Bluesky uses an App Password</strong><span>Use a Bluesky App Password, not your normal password.</span></div>
               ) : state?.configured ? (
                 <a className="loginBtn" style={{ background: meta.color }} href={`/api/oauth/${platform.toLowerCase()}/start`}>
@@ -148,11 +167,13 @@ export default function ConnectPlatform() {
                 </a>
               ) : null}
 
-              <a className="secondaryBtn wideBtn" href={OFFICIAL[platform]} target="_blank" rel="noreferrer">Open official {platform} login</a>
-              <button className="secondaryBtn" onClick={refresh}>Refresh connection status</button>
+              {(!connected || viewMode==="tech") && <>
+                <a className="secondaryBtn wideBtn" href={OFFICIAL[platform]} target="_blank" rel="noreferrer">Open official {platform} login</a>
+                <button className="secondaryBtn" onClick={refresh}>Refresh connection status</button>
+              </>}
             </article>
 
-            <aside className="setupHelpCard">
+            {viewMode==="tech" && <aside className="setupHelpCard">
               <span className="eyebrow">SETUP CHECKLIST</span>
               <h3>Connect in four steps</h3>
               <div className="steps">
@@ -161,7 +182,7 @@ export default function ConnectPlatform() {
                 <div><b>3</b><span>Register this callback URL:<small>{typeof window!=="undefined" ? `${window.location.origin}/api/oauth/${platform.toLowerCase()}/callback` : ""}</small></span></div>
                 <div><b>4</b><span>Click Connect securely and approve access.</span></div>
               </div>
-            </aside>
+            </aside>}
           </section>
         </main>
       </section>
