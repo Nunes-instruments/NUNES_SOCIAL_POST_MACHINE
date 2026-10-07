@@ -387,13 +387,13 @@ export default function Home(){
               </div>
 
               <section className="accountHubCards">
-                {["LinkedIn","Facebook","Instagram","WhatsApp"].map(name=>{
+                {["LinkedIn","Facebook","Instagram","YouTube","WhatsApp"].map(name=>{
                   const a=accountHub[name]||{};
-                  const icon=name==="LinkedIn"?"in":name==="Facebook"?"f":name==="Instagram"?"◎":"WA";
-                  const cls=name==="LinkedIn"?"li":name==="Facebook"?"fb":name==="Instagram"?"ig":"wa";
+                  const icon=name==="LinkedIn"?"in":name==="Facebook"?"f":name==="Instagram"?"◎":name==="YouTube"?"▶":"WA";
+                  const cls=name==="LinkedIn"?"li":name==="Facebook"?"fb":name==="Instagram"?"ig":name==="YouTube"?"yt":"wa";
                   return <button key={name} className={"accountHubCard "+(hubAccount===name?"selected":"")} onClick={()=>setHubAccount(name)}>
                     <div className={"accountHubIcon "+cls}>{icon}</div>
-                    <div><strong>{name}</strong><span>{a.name||a.phone||"Nunes account"}</span></div>
+                    <div><strong>{name}</strong><span>{name==="WhatsApp"?`${a.numberCount||0} Numbers Connected`:(a.name||a.phone||"Nunes account")}</span></div>
                     <em className={a.connected?"good":"pending"}>{a.connected?"Connected & saved":"Not connected"}</em>
                   </button>
                 })}
@@ -408,14 +408,18 @@ export default function Home(){
                 );
                 const official=hubAccount==="LinkedIn"
                   ?"https://www.linkedin.com/"
-                  : hubAccount==="WhatsApp"
-                    ?"https://business.facebook.com/wa/manage/home"
-                    :"https://business.facebook.com/latest/home";
+                  : hubAccount==="YouTube"
+                    ?"https://studio.youtube.com/"
+                    : hubAccount==="WhatsApp"
+                      ?"https://business.facebook.com/wa/manage/home"
+                      :"https://business.facebook.com/latest/home";
                 const connect=hubAccount==="WhatsApp"
                   ?"/whatsapp"
                   :(hubAccount==="Facebook"||hubAccount==="Instagram")
                     ?"/connect/Meta"
-                    :"/connect/LinkedIn";
+                    :hubAccount==="YouTube"
+                      ?"/connect/YouTube"
+                      :"/connect/LinkedIn";
                 return <section className="accountHubLayout">
                   <article className="panel accountManagerPanel">
                     <div className="panelHead">
@@ -424,8 +428,8 @@ export default function Home(){
                     </div>
 
                     <div className="accountIdentity">
-                      <div className={"accountHubIcon large "+(hubAccount==="LinkedIn"?"li":hubAccount==="Facebook"?"fb":hubAccount==="Instagram"?"ig":"wa")}>
-                        {hubAccount==="LinkedIn"?"in":hubAccount==="Facebook"?"f":hubAccount==="Instagram"?"◎":"WA"}
+                      <div className={"accountHubIcon large "+(hubAccount==="LinkedIn"?"li":hubAccount==="Facebook"?"fb":hubAccount==="Instagram"?"ig":hubAccount==="YouTube"?"yt":"wa")}>
+                        {hubAccount==="LinkedIn"?"in":hubAccount==="Facebook"?"f":hubAccount==="Instagram"?"◎":hubAccount==="YouTube"?"▶":"WA"}
                       </div>
                       <div>
                         <strong>{a.name||hubAccount}</strong>
