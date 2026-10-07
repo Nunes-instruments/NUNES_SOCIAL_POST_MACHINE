@@ -244,7 +244,7 @@ export default function Home(){
               <section className="networkCards">
                 {["Instagram","TikTok","YouTube","LinkedIn"].map(name=>{
                   const p=PLATFORMS.find(x=>x[0]===name);
-                  return <button key={name} className="networkCard" onClick={()=>{window.location.href=`/connect/${encodeURIComponent(name)}`}}>
+                  return <button key={name} className="networkCard" onClick={()=>{window.location.href=(name==="Facebook"||name==="Instagram")?"/connect/Meta":`/connect/${encodeURIComponent(name)}`}}>
                     <div className="networkHead"><span className="miniPlatform">{p?.[1]}</span><strong>{name}</strong><em className={connections[name]?.connected?"good":"mutedDot"}>{connections[name]?.connected?"Connected":"Setup"}</em></div>
                     <div className="networkValue">{connections[name]?.connected?"Ready":"—"}</div>
                     <svg viewBox="0 0 120 32" aria-hidden="true"><polyline points="0,26 15,23 28,25 42,17 58,19 72,12 88,14 103,8 120,5" fill="none" stroke="currentColor" strokeWidth="2"/></svg>
@@ -349,7 +349,7 @@ export default function Home(){
                         <div className="capRow">{meta.caps.map(cap=><span key={cap}>{cap}</span>)}</div>
                         <div className="platformFooter">
                           <button className="selectBtn" onClick={()=>setSelected(s=>s.includes(name)?s.filter(x=>x!==name):[...s,name])}>{isSelected?"Selected ✓":"Select"}</button>
-                          {!connected && <a href={`/connect/${encodeURIComponent(name)}`}>Connect</a>}
+                          {!connected && <a href={(name==="Facebook"||name==="Instagram")?"/connect/Meta":`/connect/${encodeURIComponent(name)}`}>Connect</a>}
                         </div>
                       </div>
                     })}
