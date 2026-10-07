@@ -1,49 +1,8 @@
+import { ensureInstagramConnection } from "../../../lib/meta-instagram";
 import { cookies } from "next/headers";
 import { OAUTH, envReady, ENABLED_SOCIAL_PROVIDER_IDS } from "../../../lib/oauth-config";
 import { cookieName, unseal, readConfig, secretFromJar } from "../../../lib/oauth-store";
 import { getSharedState, setSharedState, sharedStateReady } from "../../../lib/shared-state";
-
-async function ensureInstagramFromMeta(fbToken, igConfig){
-  const igId=String(igConfig?.accountId||"").trim();
-  if(!fbToken?.access_token || !igId) return null;
-  try{
-    const u=new URL(`https://graph.facebook.com/v24.0/${encodeURIComponent(igId)}`);
-    u.searchParams.set("fields","id,username,account_type");
-    u.searchParams.set("access_token",fbToken.access_token);
-    const r=await fetch(u,{cache:"no-store"});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok || !j?.id){
-      console.warn("[INSTAGRAM HEALTH] validation failed",j?.error?.message||`HTTP ${r.status}`);
-      return null;
-    }
-    const token={
-      ...fbToken,
-      platform:"Instagram",
-      access_token:fbToken.access_token,
-      instagram_user_id:String(j.id),
-      username:j.username||"",
-      account_type:j.account_type||"",
-      linkedFrom:"facebook-meta-token",
-      validatedAt:Date.now()
-    };
-    await Promise.all([
-      setSharedState("token:instagram",token),
-      setSharedState("config:instagram",{
-        ...igConfig,
-        platform:"instagram",
-        accountId:String(j.id),
-        name:j.username||igConfig?.name||"",
-        accountType:j.account_type||igConfig?.accountType||"",
-        validatedAt:Date.now(),
-        savedAt:Date.now()
-      })
-    ]);
-    return token;
-  }catch(e){
-    console.warn("[INSTAGRAM HEALTH] validation exception",String(e?.message||e));
-    return null;
-  }
-}
 
 async function validateFacebookPublishing(token, saved) {
   if (!token?.access_token) return { connected:false, health:"not-connected", missingPermissions:[], pageAccessible:false, canCreate:false };
@@ -112,7 +71,8 @@ export async function GET() {
 
     if(id==="instagram" && !token?.access_token && saved?.accountId){
       const fbToken=await getSharedState("token:facebook");
-      token=await ensureInstagramFromMeta(fbToken,saved) || token;
+      const repaired=await ensureInstagramConnection(saved,fbToken);
+      if(repaired?.connected) token=await getSharedState("token:instagram") || token;
     }
 
     const configured = envReady(id) || Boolean(saved?.clientId && saved?.clientSecret);
