@@ -42,6 +42,11 @@ export default function ConnectPlatform() {
   const params = useParams();
   const qs = useSearchParams();
   const platform = decodeURIComponent(String(params.platform || ""));
+  useEffect(() => {
+    if (platform === "Facebook" || platform === "Instagram") {
+      window.location.replace("/connect/Meta");
+    }
+  }, [platform]);
   const [state, setState] = useState(null);
   const [secureReady,setSecureReady]=useState(true);
   const [clientId,setClientId]=useState("");
