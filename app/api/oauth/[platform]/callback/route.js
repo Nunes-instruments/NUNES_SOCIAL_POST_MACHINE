@@ -1,3 +1,4 @@
+import { ensureInstagramConnection } from "../../../../lib/meta-instagram";
 import { NextResponse } from "next/server";
 import { OAUTH } from "../../../../lib/oauth-config";
 import { seal, cookieName, COOKIE_OPTIONS, readConfig, secretFromJar } from "../../../../lib/oauth-store";
@@ -245,6 +246,13 @@ export async function GET(request, { params }) {
     await setSharedState(`token:${id}`,payload);
     if (id === "facebook") {
       await setSharedState("token:facebook",payload);
+      const igConfig=await getSharedState("config:instagram");
+      if(igConfig){
+        const igRepair=await ensureInstagramConnection(igConfig,payload);
+        if(!igRepair?.connected){
+          console.warn("[META OAUTH] Instagram auto-link incomplete", igRepair?.reason || "unknown", igRepair?.detail || "");
+        }
+      }
     }
     response.cookies.set(cookieName(config.label), seal(payload, secret), COOKIE_OPTIONS);
     response.cookies.delete(`nunes_state_${id}`);
