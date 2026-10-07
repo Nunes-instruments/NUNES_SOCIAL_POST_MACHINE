@@ -131,7 +131,7 @@ export async function GET(request, { params }) {
     if (id === "facebook") {
       try {
         const pagesRes = await fetch(
-          "https://graph.facebook.com/v24.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=" +
+          "https://graph.facebook.com/v24.0/me/accounts?fields=id,name,access_token,instagram_business_account,connected_instagram_account&access_token=" +
           encodeURIComponent(data.access_token),
           { cache: "no-store" }
         );
@@ -151,7 +151,7 @@ export async function GET(request, { params }) {
           });
 
           const existingIg = (await getSharedState("config:instagram")) || {};
-          const igId = page.instagram_business_account?.id || existingIg.accountId || "";
+          const igId = page.instagram_business_account?.id || page.connected_instagram_account?.id || "";
           if (igId) {
             const igAccessToken = page.access_token || data.access_token;
             const igRes = await fetch(
