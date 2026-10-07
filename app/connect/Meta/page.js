@@ -65,7 +65,9 @@ export default function MetaConnectPage(){
     window.location.href=j.connectUrl;
   }
 
-  const fb=fbHealth ? Boolean(fbHealth.connected) : Boolean(state?.facebook?.connected);
+  const fbSignedIn=fbHealth ? Boolean(fbHealth.signedIn) : Boolean(state?.facebook?.connected);
+  const fbReady=fbHealth ? Boolean(fbHealth.publishingReady) : Boolean(state?.facebook?.connected);
+  const fb=fbSignedIn;
   const ig=Boolean(state?.instagram?.connected);
   const wa=Boolean(state?.whatsapp?.connected);
   const connectedCount=[fb,ig,wa].filter(Boolean).length;
@@ -108,7 +110,7 @@ export default function MetaConnectPage(){
             <button className={viewMode==="admin"?"active":""} onClick={()=>setViewMode("admin")}>Admin View</button>
             <button className={viewMode==="tech"?"active":""} onClick={()=>setViewMode("tech")}>Tech View</button>
           </div>
-          {fbHealth?.configured && !fbHealth?.connected && fbHealth?.mode && fbHealth.mode!=="ready-to-login" && <div className="warning">
+          {fbHealth?.configured && fbHealth?.signedIn && !fbHealth?.publishingReady && <div className="warning">
             <strong>Facebook action required: {String(fbHealth.mode).replaceAll("-"," ")}</strong>
             <span>{fbHealth.actionRequired || "Reconnect Meta and grant the required Page permissions."}</span>
             {fbHealth.health?.missingPermissions?.length>0 && <small>Missing: {fbHealth.health.missingPermissions.join(", ")}</small>}
@@ -118,8 +120,14 @@ export default function MetaConnectPage(){
           <section className="metaStatusGrid">
             <div className={fb?"metaServiceCard connected":"metaServiceCard"}>
               <div className="metaServiceIcon fb">f</div>
-              <div><strong>Facebook</strong><span>{fb?"Connected":state?.facebook?.pageId?"Configured":"Not connected"}</span>{state?.facebook?.name&&<small>{state.facebook.name}</small>}</div>
-              <b>{fb?"✓":"—"}</b>
+              <div>
+                <strong>Facebook</strong>
+                <span>{fbSignedIn?"Signed in & saved":state?.facebook?.pageId?"Configured":"Not connected"}</span>
+                {state?.facebook?.name&&<small>{state.facebook.name}</small>}
+                {fbSignedIn&&!fbReady&&<small>Publishing: action required</small>}
+                {fbReady&&<small>Publishing: ready</small>}
+              </div>
+              <b>{fbSignedIn?"✓":"—"}</b>
             </div>
             <div className={ig?"metaServiceCard connected":"metaServiceCard"}>
               <div className="metaServiceIcon ig">◎</div>
@@ -180,7 +188,7 @@ export default function MetaConnectPage(){
                 <div><strong>Meta setup is saved securely</strong><span>API credentials are hidden in Admin View. Use Reconnect only when permissions or account access need to be refreshed.</span></div>
               </div>}
 
-              {state?.metaConfigured && <a className="loginBtn metaLogin" href="/api/oauth/facebook/start">{fbHealth?.connected?"Reconnect Meta securely":"Reconnect Meta & grant publishing access"}</a>}
+              {state?.metaConfigured && <a className="loginBtn metaLogin" href="/api/oauth/facebook/start">{fbReady?"Reconnect Meta securely":fbSignedIn?"Refresh Meta publishing permission":"Connect Meta securely"}</a>}
               <button className="secondaryBtn" onClick={refresh}>Refresh connection status</button>
             </article>
 
