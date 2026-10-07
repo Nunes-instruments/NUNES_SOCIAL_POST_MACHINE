@@ -143,21 +143,66 @@ async function postX(body, token) {
 }
 
 async function postFacebook(body, token, config) {
-  if (!token?.access_token) return { status: "NOT_CONNECTED" };
+  if (!token?.access_token) return {
+    status:"NOT_CONNECTED",
+    error:"Facebook is not connected. Reconnect Meta before publishing.",
+    technicalError:"No Facebook access token is stored."
+  };
+
+  const required=["pages_read_engagement","pages_manage_posts"];
+  let granted=[];
+  try{
+    const pr=await fetch("https://graph.facebook.com/v24.0/me/permissions?access_token="+encodeURIComponent(token.access_token),{cache:"no-store"});
+    const pj=await pr.json().catch(()=>({}));
+    if(pr.ok && Array.isArray(pj.data)) granted=pj.data.filter(x=>x.status==="granted").map(x=>x.permission);
+  }catch{}
+
+  const missing=required.filter(x=>!granted.includes(x));
+  if(missing.length){
+    return {
+      status:"PERMISSION_REQUIRED",
+      error:"Facebook needs Page publishing permission. Open Meta connection and reconnect with the required permissions.",
+      technicalError:`Missing granted permissions: ${missing.join(", ")}`,
+      action:"RECONNECT_META",
+      missingPermissions:missing
+    };
+  }
+
   let pageId = config?.accountId || process.env.FACEBOOK_PAGE_ID || null;
   let pageToken = token.access_token;
+  let selectedPage=null;
 
-  const pages = await fetch("https://graph.facebook.com/v24.0/me/accounts?fields=id,name,access_token&access_token=" + encodeURIComponent(token.access_token), { cache:"no-store" });
+  const pages = await fetch(
+    "https://graph.facebook.com/v24.0/me/accounts?fields=id,name,access_token,tasks&access_token=" + encodeURIComponent(token.access_token),
+    { cache:"no-store" }
+  );
   const pj = await pages.json().catch(()=>({}));
   if (pages.ok && Array.isArray(pj.data) && pj.data.length) {
-    const page = pageId ? pj.data.find(x=>String(x.id)===String(pageId)) : pj.data[0];
-    if (page) {
-      pageId = page.id;
-      pageToken = page.access_token || pageToken;
+    selectedPage = pageId ? pj.data.find(x=>String(x.id)===String(pageId)) : pj.data[0];
+    if (selectedPage) {
+      pageId = selectedPage.id;
+      pageToken = selectedPage.access_token || pageToken;
     }
   }
 
-  if (!pageId) return { status: "ACCOUNT_ID_REQUIRED", error: "No Facebook Page was detected. Enter the Page ID in API Setup." };
+  if (!selectedPage || !pageId) {
+    return {
+      status:"PAGE_ACCESS_REQUIRED",
+      error:"Nunes Instrumentation Page is not available to this Meta login. Reconnect Meta and grant/select the Page.",
+      technicalError: pages.ok ? "Target Page not returned by /me/accounts." : JSON.stringify(pj).slice(0,800),
+      action:"RECONNECT_META"
+    };
+  }
+
+  const tasks=Array.isArray(selectedPage.tasks)?selectedPage.tasks:[];
+  if(tasks.length && !tasks.includes("CREATE_CONTENT") && !tasks.includes("MANAGE")){
+    return {
+      status:"PAGE_ROLE_REQUIRED",
+      error:"Your Facebook account does not have permission to create content for this Page. Give this user Page content/admin access, then reconnect Meta.",
+      technicalError:`Page tasks returned by Meta: ${tasks.join(", ") || "none"}`,
+      action:"RECONNECT_META"
+    };
+  }
 
   const data = new URLSearchParams({ message: body.text, access_token: pageToken });
   const r = await fetch(`https://graph.facebook.com/v24.0/${pageId}/feed`, {
@@ -167,11 +212,29 @@ async function postFacebook(body, token, config) {
   });
 
   const j = await r.json().catch(() => ({}));
+  const raw=JSON.stringify(j).slice(0,1200);
+  if(!r.ok){
+    const code=j?.error?.code;
+    const userError=code===200
+      ? "Facebook rejected Page publishing access. Reconnect Meta after granting Page publishing permissions and Page content/admin access."
+      : "Facebook could not publish this post. Reconnect Meta or check the Facebook Page permissions.";
+    return {
+      status:"FAILED",
+      httpStatus:r.status,
+      externalId:null,
+      error:userError,
+      technicalError:raw,
+      action:"RECONNECT_META"
+    };
+  }
+
   return {
-    status: r.ok ? "POSTED" : "FAILED",
-    httpStatus: r.status,
-    externalId: j.id || null,
-    error: r.ok ? null : JSON.stringify(j).slice(0, 800)
+    status:"POSTED",
+    httpStatus:r.status,
+    externalId:j.id||null,
+    pageId,
+    pageName:selectedPage.name||"",
+    error:null
   };
 }
 
