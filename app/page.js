@@ -406,7 +406,7 @@ export default function Home(){
                   return <button key={name} className={"accountHubCard "+(hubAccount===name?"selected":"")} onClick={()=>setHubAccount(name)}>
                     <div className={"accountHubIcon "+cls}>{icon}</div>
                     <div><strong>{name}</strong><span>{a.name||a.phone||"Nunes account"}</span></div>
-                    <em className={a.connected?"good":"pending"}>{a.connected?"Connected":"Not connected"}</em>
+                    <em className={a.connected?"good":"pending"}>{a.connected?"Connected & saved":"Not connected"}</em>
                   </button>
                 })}
               </section>
@@ -430,7 +430,7 @@ export default function Home(){
                   <article className="panel accountManagerPanel">
                     <div className="panelHead">
                       <div><h2>{hubAccount}</h2><p>{a.name||a.phone||"Account management"}</p></div>
-                      <span className={a.connected?"pill ok":"pill"}>{a.connected?"CONNECTED":"NOT CONNECTED"}</span>
+                      <span className={a.connected?"pill ok":"pill"}>{a.connected?"SIGNED IN & SAVED":"NOT CONNECTED"}</span>
                     </div>
 
                     <div className="accountIdentity">
