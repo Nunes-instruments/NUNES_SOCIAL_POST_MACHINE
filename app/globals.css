@@ -234,3 +234,30 @@ button,.secondaryBtn{border:1px solid var(--line);background:#fff;color:var(--in
 .technicalResult pre{white-space:pre-wrap;word-break:break-word;font-size:8px;line-height:1.45;color:#6a3940;background:#fff5f5;border-radius:7px;padding:9px;margin:8px 0 0}
 .metaModeSwitch{margin:0 0 12px}
 @media(max-width:850px){.resultRowAdvanced{grid-template-columns:1fr auto}.resultMessage,.resultAction{grid-column:1/-1}}
+
+
+/* Active Social Accounts cleanup */
+.activeSocialGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.activeSocialCard{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px 12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+.activeSocialText strong{display:block;font-size:11px}.activeSocialText span{display:block;color:var(--muted);font-size:8px;margin-top:3px}
+.activeSocialCard>.secondaryBtn{grid-column:2/4;margin:0;justify-self:start;font-size:8px}
+.whatsappActiveCard{grid-template-columns:42px minmax(0,1fr) auto}
+.whatsappActiveCard .addWaBtn{grid-column:3;margin-left:6px}
+.accountHubIcon.yt{background:#ff0000}
+@media(max-width:760px){.activeSocialGrid{grid-template-columns:1fr}.whatsappActiveCard .addWaBtn{grid-column:2/4;margin-left:0}}
+
+/* WhatsApp Hub */
+.waNumberGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.waNumberCard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px}
+.waNumberTop{display:grid;grid-template-columns:36px 1fr auto;gap:9px;align-items:center;margin-bottom:12px}
+.waNumberTop strong{display:block;font-size:10px}.waNumberTop span{display:block;font-size:8px;color:var(--muted);margin-top:2px}
+.waMeta{display:grid;grid-template-columns:100px 1fr;gap:8px;padding:6px 0;border-top:1px solid #eef2f5}.waMeta span{font-size:8px;color:var(--muted)}.waMeta strong{font-size:8px;overflow:hidden;text-overflow:ellipsis}
+.waCardActions{display:flex;gap:7px;margin-top:10px}.waCardActions button{font-size:8px;padding:7px 8px}.dangerLite{color:#b84c4c;background:#fff5f5;border-color:#f0d2d2}
+.waAddPanel{margin-bottom:14px}.waFull{grid-column:1/-1}
+.waComposerLayout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:14px;margin-bottom:14px}
+.waSelectedNumbers{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.waSelectedNumbers label{display:flex;align-items:center;gap:6px;margin:0;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff}.waSelectedNumbers input{width:auto;margin:0}.disabledChoice{opacity:.5}
+.waComposerActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.waPreviewPhone{max-width:330px;margin:8px auto;border:1px solid #dce5e9;border-radius:18px;overflow:hidden;background:#0d1f1b;color:#fff;min-height:380px}.waPreviewHeader{padding:12px;background:#153a31;font-size:10px;font-weight:800}.waPreviewPhone img,.waPreviewMedia{width:100%;height:220px;object-fit:cover;background:#233a35;display:grid;place-items:center;color:#aabbb5;font-size:9px}.waPreviewText{padding:14px;font-size:12px;line-height:1.5;white-space:pre-wrap}
+.waHistory{display:flex;flex-direction:column}.waHistoryRow{display:grid;grid-template-columns:1fr auto;gap:14px;border-bottom:1px solid var(--line);padding:11px 0}.waHistoryRow strong{font-size:9px}.waHistoryRow p{margin:3px 0;font-size:9px;color:#566174}.waHistoryRow span,.waHistoryRow small{display:block;font-size:8px;color:var(--muted)}
+@media(max-width:1000px){.waNumberGrid{grid-template-columns:repeat(2,1fr)}.waComposerLayout{grid-template-columns:1fr}}
+@media(max-width:650px){.waNumberGrid{grid-template-columns:1fr}.waNumberTop{grid-template-columns:36px 1fr}.waNumberTop>.pill{grid-column:1/-1;justify-self:start}.waHistoryRow{grid-template-columns:1fr}}
