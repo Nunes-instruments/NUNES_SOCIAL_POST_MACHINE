@@ -16,11 +16,18 @@ export default function MetaConnectPage(){
   const [oauthCompleted,setOauthCompleted]=useState(false);
   const [oauthError,setOauthError]=useState("");
   const [oauthDetail,setOauthDetail]=useState("");
+  const [viewMode,setViewMode]=useState("admin");
+  const [fbHealth,setFbHealth]=useState(null);
 
   async function refresh(){
-    const r=await fetch("/api/meta/setup",{cache:"no-store"});
+    const [r,sr]=await Promise.all([
+      fetch("/api/meta/setup",{cache:"no-store"}),
+      fetch("/api/integrations/status",{cache:"no-store"})
+    ]);
     const j=await r.json().catch(()=>({}));
+    const sj=await sr.json().catch(()=>({}));
     setState(j);
+    setFbHealth(sj.integrations?.Facebook||null);
     if(j.facebook?.pageId) setFacebookPageId(j.facebook.pageId);
     if(j.instagram?.userId) setInstagramUserId(j.instagram.userId);
     if(j.whatsapp?.wabaId) setWabaId(j.whatsapp.wabaId);
@@ -58,7 +65,7 @@ export default function MetaConnectPage(){
     window.location.href=j.connectUrl;
   }
 
-  const fb=Boolean(state?.facebook?.connected);
+  const fb=fbHealth ? Boolean(fbHealth.connected) : Boolean(state?.facebook?.connected);
   const ig=Boolean(state?.instagram?.connected);
   const wa=Boolean(state?.whatsapp?.connected);
   const connectedCount=[fb,ig,wa].filter(Boolean).length;
@@ -97,6 +104,15 @@ export default function MetaConnectPage(){
           </div>
 
           {oauthCompleted && <div className="important"><strong>Meta authorization completed</strong><span>NUNES has refreshed Facebook, Instagram and WhatsApp assets that Meta allowed this app to access.</span></div>}
+          <div className="modeSwitch metaModeSwitch">
+            <button className={viewMode==="admin"?"active":""} onClick={()=>setViewMode("admin")}>Admin View</button>
+            <button className={viewMode==="tech"?"active":""} onClick={()=>setViewMode("tech")}>Tech View</button>
+          </div>
+          {fbHealth?.configured && !fbHealth?.connected && fbHealth?.mode && fbHealth.mode!=="ready-to-login" && <div className="warning">
+            <strong>Facebook action required: {String(fbHealth.mode).replaceAll("-"," ")}</strong>
+            <span>{fbHealth.actionRequired || "Reconnect Meta and grant the required Page permissions."}</span>
+            {fbHealth.health?.missingPermissions?.length>0 && <small>Missing: {fbHealth.health.missingPermissions.join(", ")}</small>}
+          </div>}
           {oauthError && <div className="warning metaError"><strong>Meta connection failed: {oauthError}</strong><span>{oauthDetail || "Retry after checking the Meta configuration and app permissions."}</span></div>}
 
           <section className="metaStatusGrid">
@@ -123,7 +139,7 @@ export default function MetaConnectPage(){
               <h2>Meta API Setup</h2>
               <p>Enter the Meta App ID and App Secret once. NUNES will reuse them for Facebook and Instagram and attempt WhatsApp Business discovery during the same authorization.</p>
 
-              <form className="apiSetupForm metaSetupForm" onSubmit={saveAndConnect}>
+              {viewMode==="tech" && <form className="apiSetupForm metaSetupForm" onSubmit={saveAndConnect}>
                 <label>Meta App ID
                   <input value={clientId} onChange={e=>setClientId(e.target.value)} placeholder="Paste Meta App ID" required/>
                 </label>
@@ -157,13 +173,18 @@ export default function MetaConnectPage(){
 
                 <button className="primary wideBtn" type="submit">Save & Connect Meta</button>
                 {msg&&<div className="saveMsg">{msg}</div>}
-              </form>
+              </form>}
 
-              {state?.metaConfigured && <a className="loginBtn metaLogin" href="/api/oauth/facebook/start">Reconnect Meta securely</a>}
+              {viewMode==="admin" && state?.metaConfigured && <div className="connectedSummary">
+                <div className="connectedCheck">{fb||ig||wa?"✓":"!"}</div>
+                <div><strong>Meta setup is saved securely</strong><span>API credentials are hidden in Admin View. Use Reconnect only when permissions or account access need to be refreshed.</span></div>
+              </div>}
+
+              {state?.metaConfigured && <a className="loginBtn metaLogin" href="/api/oauth/facebook/start">{fbHealth?.connected?"Reconnect Meta securely":"Reconnect Meta & grant publishing access"}</a>}
               <button className="secondaryBtn" onClick={refresh}>Refresh connection status</button>
             </article>
 
-            <aside className="setupHelpCard">
+            {viewMode==="tech" && <aside className="setupHelpCard">
               <span className="eyebrow">MANUAL META SETUP</span>
               <h3>Do these once in Meta Developers</h3>
               <div className="steps">
@@ -184,7 +205,7 @@ export default function MetaConnectPage(){
                 <span>whatsapp_business_management</span>
                 <span>whatsapp_business_messaging</span>
               </div>
-            </aside>
+            </aside>}
           </section>
         </main>
       </section>
