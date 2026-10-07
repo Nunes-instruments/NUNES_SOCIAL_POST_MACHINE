@@ -1,52 +1,5 @@
+import { ensureInstagramConnection } from "../../../lib/meta-instagram";
 import { getSharedState, setSharedState } from "../../../lib/shared-state";
-
-async function ensureInstagramConnection(igConfig, fbToken){
-  const igId=String(igConfig?.accountId||"").trim();
-  const accessToken=fbToken?.access_token;
-  if(!igId || !accessToken) return {connected:false,reason:!igId?"instagram-id-missing":"meta-token-missing"};
-
-  try{
-    const url=new URL(`https://graph.facebook.com/v24.0/${encodeURIComponent(igId)}`);
-    url.searchParams.set("fields","id,username,account_type");
-    url.searchParams.set("access_token",accessToken);
-    const r=await fetch(url,{cache:"no-store"});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok || !j?.id){
-      const detail=j?.error?.message || `HTTP ${r.status}`;
-      console.warn("[INSTAGRAM CONNECT] validation failed",detail);
-      return {connected:false,reason:"instagram-validation-failed",detail};
-    }
-
-    const tokenPayload={
-      ...fbToken,
-      platform:"Instagram",
-      access_token:accessToken,
-      instagram_user_id:String(j.id),
-      username:j.username||"",
-      account_type:j.account_type||"",
-      linkedFrom:"facebook-meta-token",
-      validatedAt:Date.now()
-    };
-
-    await Promise.all([
-      setSharedState("token:instagram",tokenPayload),
-      setSharedState("config:instagram",{
-        ...igConfig,
-        platform:"instagram",
-        accountId:String(j.id),
-        name:j.username||igConfig?.name||"",
-        accountType:j.account_type||igConfig?.accountType||"",
-        validatedAt:Date.now(),
-        savedAt:Date.now()
-      })
-    ]);
-
-    return {connected:true,userId:String(j.id),name:j.username||"",accountType:j.account_type||""};
-  }catch(e){
-    console.error("[INSTAGRAM CONNECT] validation exception",String(e?.message||e));
-    return {connected:false,reason:"instagram-validation-exception",detail:String(e?.message||e)};
-  }
-}
 
 export async function GET(){
   let [fb,ig,wa,fbToken,igToken,waToken]=await Promise.all([
