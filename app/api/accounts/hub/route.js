@@ -73,6 +73,8 @@ export async function GET(){
         capabilities:["Content","Publishing","Settings","Permissions"]
       },
       Facebook:{
+        signedIn:Boolean(fbTok?.access_token),
+        sharedSaved:Boolean(fbTok?.access_token),
         connected:Boolean(fbTok?.access_token),
         configured:Boolean(fbCfg?.clientId&&fbCfg?.clientSecret),
         name:fbCfg?.name||"Nunes Instrumentation",
