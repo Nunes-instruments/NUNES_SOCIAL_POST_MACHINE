@@ -1,4 +1,5 @@
 import { getSharedState } from "../../../lib/shared-state";
+import { GET as getIntegrationHealth } from "../../integrations/status/route";
 
 async function getFacebookLive(token,cfg){
   if(!token?.access_token || !cfg?.accountId) return [];
@@ -56,6 +57,10 @@ export async function GET(){
     getSharedState("whatsapp:numbers")
   ]);
 
+  const healthResponse=await getIntegrationHealth();
+  const healthPayload=await healthResponse.json();
+  const integrationHealth=healthPayload.integrations||{};
+  const isConnected=(name)=>integrationHealth[name]?.connected===true;
   const posts=Array.isArray(history)?history:[];
   const waNumbers=Array.isArray(waNumbersRaw)?waNumbersRaw:[];
   const waConnectedCount=waNumbers.filter(n=>n?.enabled!==false && n?.phoneNumberId && (n?.accessToken||waTok?.access_token)).length || (waTok?.access_token&&waCfg?.accountId?1:0);
@@ -70,7 +75,9 @@ export async function GET(){
     ok:true,
     accounts:{
       LinkedIn:{
-        connected:Boolean(liTok?.access_token),
+        connectionHealth:integrationHealth.LinkedIn?.publishingHealth||integrationHealth.LinkedIn?.mode||"unknown",
+        connectionError:integrationHealth.LinkedIn?.actionRequired||"",
+        connected:isConnected("LinkedIn"),
         configured:Boolean(liCfg?.clientId&&liCfg?.clientSecret),
         name:liTok?.profile?.name||"Nunes Instrumentation",
         accountId:liCfg?.accountId||liTok?.author_urn||"",
@@ -78,9 +85,11 @@ export async function GET(){
         capabilities:["Content","Publishing","Settings","Permissions"]
       },
       Facebook:{
+        connectionHealth:integrationHealth.Facebook?.publishingHealth||integrationHealth.Facebook?.mode||"unknown",
+        connectionError:integrationHealth.Facebook?.actionRequired||"",
         signedIn:Boolean(fbTok?.access_token),
         sharedSaved:Boolean(fbTok?.access_token),
-        connected:Boolean(fbTok?.access_token),
+        connected:isConnected("Facebook"),
         configured:Boolean(fbCfg?.clientId&&fbCfg?.clientSecret),
         name:fbCfg?.name||"Nunes Instrumentation",
         accountId:fbCfg?.accountId||"",
@@ -88,7 +97,9 @@ export async function GET(){
         capabilities:["Content","Ads","Insights","Messages","Comments","Settings","Permissions"]
       },
       Instagram:{
-        connected:Boolean(igTok?.access_token&&igCfg?.accountId),
+        connectionHealth:integrationHealth.Instagram?.publishingHealth||integrationHealth.Instagram?.mode||"unknown",
+        connectionError:integrationHealth.Instagram?.actionRequired||"",
+        connected:isConnected("Instagram"),
         configured:Boolean(igCfg?.clientId&&igCfg?.clientSecret),
         name:igCfg?.name||"Instagram Professional",
         accountId:igCfg?.accountId||"",
@@ -96,7 +107,9 @@ export async function GET(){
         capabilities:["Content","Ads","Insights","Messages","Comments","Settings","Permissions"]
       },
       YouTube:{
-        connected:Boolean(ytTok?.access_token),
+        connectionHealth:integrationHealth.YouTube?.publishingHealth||integrationHealth.YouTube?.mode||"unknown",
+        connectionError:integrationHealth.YouTube?.actionRequired||"",
+        connected:isConnected("YouTube"),
         configured:Boolean(ytCfg?.clientId&&ytCfg?.clientSecret),
         name:"Nunes Instrumentation YouTube",
         accountId:ytCfg?.accountId||"",
@@ -104,13 +117,15 @@ export async function GET(){
         capabilities:["Content","Publishing","Settings","Permissions"]
       },
       WhatsApp:{
-        connected:waConnectedCount>0,
+        connectionHealth:integrationHealth.WhatsApp?.publishingHealth||integrationHealth.WhatsApp?.mode||"unknown",
+        connectionError:integrationHealth.WhatsApp?.actionRequired||"",
+        connected:isConnected("WhatsApp"),
         configured:Boolean(waCfg?.clientId&&waCfg?.clientSecret),
         name:waCfg?.verifiedName||"WhatsApp Business",
         phone:waCfg?.phone||"",
         accountId:waCfg?.accountId||"",
         wabaId:waCfg?.secondaryId||"",
-        numberCount:waConnectedCount,
+        numberCount:integrationHealth.WhatsApp?.numbersConnected||0,
         numbersConfigured:waNumbers.length || (waCfg?.accountId?1:0),
         recent:byChannel("WhatsApp"),
         capabilities:["Messages","Templates","Numbers","Settings","Permissions"]
