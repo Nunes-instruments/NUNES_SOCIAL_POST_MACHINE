@@ -61,6 +61,8 @@ export default function Home(){
   const [accountHub,setAccountHub]=useState({});
   const [hubAccount,setHubAccount]=useState("Facebook");
   const [results,setResults]=useState([]);
+  const [savedResults,setSavedResults]=useState([]);
+  const [resultsError,setResultsError]=useState("");
   const [search,setSearch]=useState("");
   const [timeframe,setTimeframe]=useState("7 Days");
   const [attachments,setAttachments]=useState([]);
@@ -87,7 +89,15 @@ export default function Home(){
       if(r.ok && j?.accounts) setAccountHub(j.accounts);
     }catch{}
   }
-  useEffect(()=>{refreshConnections();refreshAccountHub()},[]);
+  async function refreshPublishingHistory(){
+    try {
+      const r=await fetch("/api/publishing-history",{cache:"no-store"});
+      const j=await r.json();
+      if(!r.ok||!j.ok) throw new Error(j.error||"Publishing history unavailable");
+      setSavedResults(j.posts||[]);setResultsError("");
+    }catch(e){setResultsError(e.message||"Could not load publishing history");}
+  }
+  useEffect(()=>{refreshConnections();refreshAccountHub();refreshPublishingHistory()},[]);
 
   const connectedCount=useMemo(()=>PLATFORMS.filter(p=>connections[p[0]]?.connected).length + (connections.WhatsApp?.connected?1:0),[connections]);
   const readyCount=useMemo(()=>PLATFORMS.filter(p=>connections[p[0]]?.configured).length + (connections.WhatsApp?.configured?1:0),[connections]);
@@ -189,10 +199,10 @@ export default function Home(){
       try{
         const r=await fetch("/api/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,channel:platform,text:drafts[platform],mediaUrl,angle,attachments,idempotencyKey:`${batchId}:${platform.toLowerCase()}`})});
         const j=await r.json();
-        rr.push({platform,status:j.external?.status||(j.ok?"ARCHIVED":"FAILED"),error:j.external?.error||null,technicalError:j.external?.technicalError||null,action:j.external?.action||null,externalId:j.external?.externalId||null});
-      }catch{rr.push({platform,status:"FAILED"})}
+        rr.push({id:j.post?.id||`${batchId}:${platform}`,platform,topic,text:drafts[platform],mediaUrl,attachments,publishedAt:j.post?.publishedAt||new Date().toISOString(),status:j.external?.status||(j.ok?"ARCHIVED":"FAILED"),error:j.external?.error||j.error||null,technicalError:j.external?.technicalError||null,action:j.external?.action||null,externalId:j.external?.externalId||null});
+      }catch(e){rr.push({id:`${batchId}:${platform}`,platform,topic,text:drafts[platform],mediaUrl,attachments,publishedAt:new Date().toISOString(),status:"FAILED",error:e?.message||"Network error"})}
     }
-    setResults(rr); setTab("Results");
+    setResults(rr); await refreshPublishingHistory(); setTab("Results");
     } finally { publishInFlightRef.current=false; setPublishing(false); }
   }
 
@@ -551,19 +561,39 @@ export default function Home(){
           {tab==="Results" && (
             <>
               <div className="pageHeading">
-                <div><span>RESULTS</span><h1>Publishing results</h1><p>{appMode==="admin"?"Clear publishing status and actions required.":"Provider status with technical diagnostics."}</p></div>
+                <div><span>RESULTS</span><h1>Publishing results</h1><p>See the content preview, media and actual delivery outcome for every saved post.</p></div>
+                <button className="secondaryBtn" onClick={refreshPublishingHistory}>Refresh history</button>
               </div>
-              <section className="panel">
-                {results.length?results.map(r=><div className="resultRow resultRowAdvanced" key={r.platform}>
-                  <div>
-                    <strong>{r.platform}</strong>
-                    {r.externalId&&<small>Post ID: {r.externalId}</small>}
-                  </div>
-                  <span className={`pill ${r.status==="POSTED"?"ok":""}`}>{r.status}</span>
-                  {r.error&&<div className="resultMessage">{r.error}</div>}
-                  {r.action==="RECONNECT_META"&&<a className="secondaryBtn resultAction" href="/connect/Meta">Reconnect Meta</a>}
-                  {appMode==="tech"&&r.technicalError&&<details className="technicalResult"><summary>Technical details</summary><pre>{r.technicalError}</pre></details>}
-                </div>):<div className="empty">No posting run yet.</div>}
+              {resultsError&&<div className="warning" role="alert">{resultsError}</div>}
+              <section className="grid two">
+                {(() => {
+                  const all=[...results,...savedResults.map(p=>({id:p.id,platform:p.channel,topic:p.topic,text:p.text,mediaUrl:p.mediaUrl,attachments:p.attachments,publishedAt:p.publishedAt,status:p.external?.status||"UNKNOWN",error:p.external?.error,externalId:p.external?.externalId,technicalError:p.external?.technicalError,action:p.external?.action}))];
+                  const seen=new Set();
+                  const unique=all.filter(r=>{const key=r.id||[r.platform,r.text,r.publishedAt].join("|");if(seen.has(key))return false;seen.add(key);return true});
+                  return unique.length?unique.map((r,i)=>{
+                    const p=PLATFORMS.find(x=>x[0]===r.platform);
+                    const media=r.mediaUrl||r.attachments?.find(x=>/^image\\/|^video\\//.test(x.type||""))?.url||"";
+                    const video=/\\.(mp4|webm|mov)(\\?|$)/i.test(media)||r.attachments?.some(x=>x.url===media&&/^video\\//.test(x.type||""));
+                    return <article className="panel" key={r.id||i} style={{overflow:"hidden"}}>
+                      <div className="panelHead"><div><h3>{r.platform||"Unknown"} post</h3><small>{r.publishedAt?new Date(r.publishedAt).toLocaleString():"Current attempt"}</small></div><span className={`pill ${r.status==="POSTED"?"ok":""}`}>{r.status||"UNKNOWN"}</span></div>
+                      <div style={{border:"1px solid var(--border, #d8dee7)",borderRadius:14,overflow:"hidden",background:"#fff",color:"#192333",margin:"12px 0"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10,padding:14}}>
+                          <div style={{width:42,height:42,borderRadius:"50%",background:r.platform==="LinkedIn"?"#0a66c2":r.platform==="Facebook"?"#1877f2":r.platform==="Instagram"?"#b23abe":"#e21b1b",color:"#fff",display:"grid",placeItems:"center",fontWeight:700}}>{p?.[1]||"N"}</div>
+                          <div><strong style={{display:"block"}}>Nunes Instrumentation</strong><span style={{fontSize:12,color:"#677185"}}>{r.platform} · {r.status==="POSTED"?"Published":"Not confirmed published"}</span></div>
+                        </div>
+                        {media&&(video?<video src={media} controls preload="metadata" style={{width:"100%",maxHeight:370,background:"#000"}}/>:<img src={media} alt={r.topic||"Post media"} loading="lazy" style={{display:"block",width:"100%",maxHeight:370,objectFit:"contain",background:"#f4f6fa"}}/>)}
+                        <div style={{padding:16,whiteSpace:"pre-wrap",overflowWrap:"anywhere",fontSize:14,lineHeight:1.6}}>
+                          {r.topic&&<strong style={{display:"block",marginBottom:8}}>{r.topic}</strong>}
+                          {r.text||"No caption stored"}
+                        </div>
+                      </div>
+                      {r.externalId&&<small>Provider post ID: {r.externalId}</small>}
+                      {r.error&&<div className="resultMessage" role="alert">{r.error}</div>}
+                      {r.action==="RECONNECT_META"&&<a className="secondaryBtn resultAction" href="/connect/Meta">Reconnect Meta</a>}
+                      {appMode==="tech"&&r.technicalError&&<details className="technicalResult"><summary>Technical details</summary><pre>{r.technicalError}</pre></details>}
+                    </article>
+                  }):<div className="panel empty">No publishing results yet. Published attempts and saved previews will appear here.</div>;
+                })()}
               </section>
             </>
           )}
