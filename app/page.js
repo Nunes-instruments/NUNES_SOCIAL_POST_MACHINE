@@ -69,6 +69,9 @@ export default function Home(){
   const [appMode,setAppMode]=useState("admin");
   const fileInputRef=useRef(null);
   const imageInputRef=useRef(null);
+  const publishInFlightRef=useRef(false);
+  const [publishing,setPublishing]=useState(false);
+  const [publishBatchId,setPublishBatchId]=useState(null);
 
   async function refreshConnections(){
     try{
@@ -170,20 +173,27 @@ export default function Home(){
   function generate(){
     if(!topic.trim()) return alert("Add a post topic first.");
     const all=buildVariants(topic.trim(),brief.trim(),angle,cta.trim());
-    const out={}; selected.forEach(p=>out[p]=all[p]); setDrafts(out); setTab("Preview");
+    const out={}; selected.forEach(p=>out[p]=all[p]); setDrafts(out); setPublishBatchId(null); setTab("Preview");
   }
 
   async function postEverywhere(){
+    if(publishInFlightRef.current) return;
+    publishInFlightRef.current=true;
+    setPublishing(true);
+    const batchId=publishBatchId||crypto.randomUUID();
+    setPublishBatchId(batchId);
     const rr=[];
-    for(const platform of selected){
+    try {
+    for(const platform of [...new Set(selected)]){
       if(!drafts[platform]) continue;
       try{
-        const r=await fetch("/api/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,channel:platform,text:drafts[platform],mediaUrl,angle,attachments})});
+        const r=await fetch("/api/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,channel:platform,text:drafts[platform],mediaUrl,angle,attachments,idempotencyKey:`${batchId}:${platform.toLowerCase()}`})});
         const j=await r.json();
         rr.push({platform,status:j.external?.status||(j.ok?"ARCHIVED":"FAILED"),error:j.external?.error||null,technicalError:j.external?.technicalError||null,action:j.external?.action||null,externalId:j.external?.externalId||null});
       }catch{rr.push({platform,status:"FAILED"})}
     }
     setResults(rr); setTab("Results");
+    } finally { publishInFlightRef.current=false; setPublishing(false); }
   }
 
   const nav=[
@@ -374,7 +384,7 @@ export default function Home(){
 
           {tab==="Preview" && (
             <>
-              <div className="pageHeading"><div><span>PUBLISHING</span><h1>Preview & edit</h1><p>Review each platform version before publishing.</p></div><button className="primary" onClick={postEverywhere}>Post Everywhere</button></div>
+              <div className="pageHeading"><div><span>PUBLISHING</span><h1>Preview & edit</h1><p>Review each platform version before publishing.</p></div><button className="primary" onClick={postEverywhere} disabled={publishing}>{publishing?"Publishing…":"Post Everywhere"}</button></div>
               <section className="grid two">{selected.map(name=>{const p=PLATFORMS.find(x=>x[0]===name);return <article className="panel" key={name}><div className="panelHead"><h3>{name}</h3><span>{p?.[2]}</span></div><small>{p?.[3]}</small><textarea className="postEditor" value={drafts[name]||""} onChange={e=>setDrafts(d=>({...d,[name]:e.target.value}))}/></article>})}</section>
             </>
           )}
