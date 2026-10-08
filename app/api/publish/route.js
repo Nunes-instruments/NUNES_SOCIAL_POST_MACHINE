@@ -1,10 +1,15 @@
 import { cookies } from "next/headers";
+import crypto from "node:crypto";
 import { put } from "@vercel/blob";
 import { cookieName, unseal, readConfig, secretFromJar } from "../../lib/oauth-store";
 import { getSharedState, setSharedState } from "../../lib/shared-state";
 import { isEnabledProvider } from "../../lib/social-providers";
 
 export const runtime = "nodejs";
+
+// Process-local duplicate suppression. Durable cross-instance atomic locking requires a database unique constraint.
+const activePublishes=globalThis.__nunesActivePublishes||(globalThis.__nunesActivePublishes=new Set());
+
 
 async function tokenFor(platform) {
   const id=String(platform||"").toLowerCase();
@@ -482,9 +487,26 @@ export async function POST(request) {
       return Response.json({ ok: false, error: "Missing channel or text" }, { status: 400 });
     }
 
-    const external = await externalPublish(body);
-    const post = await archive(body, external);
-    return Response.json({ ok: true, post, external });
+    const rawKey=String(body.idempotencyKey||"").trim();
+    if (!rawKey || rawKey.length>200 || !/^[a-zA-Z0-9:_-]+$/.test(rawKey)) {
+      return Response.json({ok:false,error:"A valid publishing idempotency key is required."},{status:400});
+    }
+    const key=crypto.createHash("sha256").update(rawKey).digest("hex");
+    const stateKey="publish:receipt:"+key;
+    if(activePublishes.has(key)) {
+      return Response.json({ok:false,error:"This post is already being published. Do not retry until its result is known.",duplicate:true},{status:409});
+    }
+    activePublishes.add(key);
+    try {
+      const previous=await getSharedState(stateKey);
+      if(previous) return Response.json({...previous,duplicate:true});
+      const external=await externalPublish(body);
+      const post=await archive(body,external);
+      const result={ok:true,post,external};
+      // Do not automatically repeat an externally attempted publish if receipt persistence fails.
+      const saved=await setSharedState(stateKey,result);
+      return Response.json({...result,receiptStored:saved});
+    } finally {activePublishes.delete(key);}
   } catch {
     return Response.json({ ok: false, error: "Publishing failed" }, { status: 500 });
   }
