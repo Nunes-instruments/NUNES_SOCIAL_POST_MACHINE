@@ -385,7 +385,23 @@ export default function Home(){
           {tab==="Preview" && (
             <>
               <div className="pageHeading"><div><span>PUBLISHING</span><h1>Preview & edit</h1><p>Review each platform version before publishing.</p></div><button className="primary" onClick={postEverywhere} disabled={publishing}>{publishing?"Publishing…":"Post Everywhere"}</button></div>
-              <section className="grid two">{selected.map(name=>{const p=PLATFORMS.find(x=>x[0]===name);return <article className="panel" key={name}><div className="panelHead"><h3>{name}</h3><span>{p?.[2]}</span></div><small>{p?.[3]}</small><textarea className="postEditor" value={drafts[name]||""} onChange={e=>setDrafts(d=>({...d,[name]:e.target.value}))}/></article>})}</section>
+              <section className="grid two">{selected.map(name=>{const p=PLATFORMS.find(x=>x[0]===name);const postText=drafts[name]||"";const media=attachments.find(x=>/^image\\/|^video\\//.test(x.type||""))||{};const url=mediaUrl||media.url||"";const isVideo=/\\.(mp4|webm|mov)(\\?|$)/i.test(url)||/^video\\//.test(media.type||"");return <article className="panel" key={name}>
+                <div className="panelHead"><h3>{name} post preview</h3><span>{p?.[2]}</span></div>
+                <small>{p?.[3]}</small>
+                <div style={{border:"1px solid var(--border, #d8dee7)",borderRadius:14,overflow:"hidden",background:"#fff",color:"#192333",margin:"16px 0",maxWidth:name==="Instagram"?440:680,marginInline:"auto"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,padding:14}}>
+                    <div style={{width:42,height:42,borderRadius:"50%",background:name==="LinkedIn"?"#0a66c2":name==="Facebook"?"#1877f2":name==="Instagram"?"#b23abe":"#e21b1b",color:"#fff",display:"grid",placeItems:"center",fontWeight:700}}>{p?.[1]}</div>
+                    <div><strong style={{display:"block"}}>Nunes Instrumentation</strong><span style={{fontSize:12,color:"#677185"}}>{name} · Preview only · Not published</span></div>
+                  </div>
+                  {name!=="Instagram"&&<p style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",padding:"0 14px",fontSize:14,lineHeight:1.6}}>{postText||"Your caption will appear here."}</p>}
+                  {url?(isVideo?<video controls preload="metadata" src={url} style={{display:"block",width:"100%",maxHeight:490,background:"#111"}}/>:<img src={url} alt="Post media preview" style={{display:"block",width:"100%",maxHeight:name==="Instagram"?520:420,objectFit:"contain",background:"#f3f4f6"}}/>):<div style={{padding:"36px 16px",textAlign:"center",background:"#f4f6f9",color:"#758195"}}>No media attached — text-only preview</div>}
+                  {name==="Instagram"&&<p style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",padding:"12px 14px",fontSize:14,lineHeight:1.6}}>{postText||"Your Instagram caption will appear here."}</p>}
+                  <div style={{padding:"12px 14px",borderTop:"1px solid #e5e7eb",fontSize:12,color:"#6b7280"}}>{name==="YouTube"?"YouTube requires a video upload to publish.":name==="Instagram"?"Instagram typically requires an image or video to publish.":"Visual preview; actual provider layout may vary."}</div>
+                </div>
+                <label style={{display:"block",fontWeight:600,marginBottom:8}}>Edit {name} caption</label>
+                <textarea className="postEditor" value={postText} onChange={e=>{setDrafts(d=>({...d,[name]:e.target.value}));setPublishBatchId(null)}}/>
+                <small>{postText.length} characters · Updates the preview as you type</small>
+              </article>})}</section>
             </>
           )}
 
