@@ -6,11 +6,12 @@ const META={
   LinkedIn:{icon:"in",cls:"li",manage:"https://www.linkedin.com/"},
   Facebook:{icon:"f",cls:"fb",manage:"https://business.facebook.com/latest/home"},
   Instagram:{icon:"◎",cls:"ig",manage:"https://business.facebook.com/latest/home"},
+  YouTube:{icon:"▶",cls:"yt",manage:"https://studio.youtube.com/"},
   WhatsApp:{icon:"WA",cls:"wa",manage:"https://business.facebook.com/wa/manage/home"}
 };
 
 function dateText(v){
-  if(!v) return "Recently";
+  if(!v) return "Not synchronized";
   try{return new Date(v).toLocaleString()}catch{return v}
 }
 
@@ -18,16 +19,19 @@ export default function AccountsHub(){
   const [data,setData]=useState(null);
   const [selected,setSelected]=useState("Facebook");
   const [loading,setLoading]=useState(true);
+  const [error,setError]=useState("");
 
   async function refresh(){
     setLoading(true);
+    setError("");
     try{
       const r=await fetch("/api/accounts/hub",{cache:"no-store"});
       const j=await r.json();
+      if(!r.ok||!j.ok) throw new Error(j.error||"Account health unavailable");
       setData(j);
       const names=Object.keys(j.accounts||{});
       if(names.length && !j.accounts?.[selected]) setSelected(names[0]);
-    }finally{setLoading(false)}
+    }catch(e){setError(e.message||"Could not fetch account health.");}finally{setLoading(false)}
   }
 
   useEffect(()=>{refresh()},[]);
@@ -69,7 +73,7 @@ export default function AccountsHub(){
       <main className="contentArea">
         <div className="pageHeading">
           <div><span>ACCOUNT MANAGEMENT</span><h1>Accounts Hub</h1><p>Manage connected social accounts, content and provider access from one workspace.</p></div>
-          <span className={connected?"pill ok":"pill"}>{connected}/4 CONNECTED</span>
+          <span className={connected?"pill ok":"pill"}>{connected}/5 CONNECTED</span>
         </div>
 
         <section className="accountHubCards">
@@ -83,6 +87,7 @@ export default function AccountsHub(){
           })}
         </section>
 
+        {error&&<div className="warning" role="alert">{error}</div>}
         {loading && <div className="panel"><div className="empty">Loading account activity…</div></div>}
 
         {!loading && <section className="accountHubLayout">
@@ -101,8 +106,10 @@ export default function AccountsHub(){
                 <strong>{active.name||selected}</strong>
                 {active.phone&&<span>{active.phone}</span>}
                 {active.accountId&&<small>ID: {active.accountId}</small>}
+                <small>Connection health: {active.connectionHealth||"unknown"}</small>
+                {active.connectionError&&<small role="alert">{active.connectionError}</small>}
               </div>
-              <a href={selected==="Facebook"||selected==="Instagram"?"/connect/Meta":selected==="LinkedIn"?"/connect/LinkedIn":"/connect/Meta"} className="secondaryBtn">
+              <a href={selected==="Facebook"||selected==="Instagram"?"/connect/Meta":selected==="LinkedIn"?"/connect/LinkedIn":selected==="YouTube"?"/connect/YouTube":"/whatsapp"} className="secondaryBtn">
                 {active.connected?"Connection settings":"Connect account"}
               </a>
             </div>
