@@ -44,7 +44,7 @@ async function archive(body, external) {
 
   try {
     const history = (await getSharedState("history:posts")) || [];
-    const next = [post, ...(Array.isArray(history) ? history : [])].slice(0,250);
+    const next = [{...post,savedPreview:true}, ...(Array.isArray(history) ? history : [])].slice(0,250);
     post.savedPreview = await setSharedState("history:posts", next);
   } catch {}
 
