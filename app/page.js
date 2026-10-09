@@ -202,7 +202,7 @@ export default function Home(){
       try{
         const r=await fetch("/api/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,channel:platform,text:drafts[platform],mediaUrl,angle,attachments,idempotencyKey:`${batchId}:${platform.toLowerCase()}`})});
         const j=await r.json();
-        rr.push({id:j.post?.id||`${batchId}:${platform}`,platform,topic,text:drafts[platform],mediaUrl,attachments,publishedAt:j.post?.publishedAt||new Date().toISOString(),status:j.external?.status||(j.ok?"ARCHIVED":"FAILED"),error:j.external?.error||j.error||null,technicalError:j.external?.technicalError||null,action:j.external?.action||null,externalId:j.external?.externalId||null});
+        rr.push({id:j.post?.id||`${batchId}:${platform}`,platform,topic,text:drafts[platform],mediaUrl,attachments,publishedAt:j.post?.publishedAt||new Date().toISOString(),status:j.external?.status||(j.ok?"ARCHIVED":"FAILED"),error:j.external?.error||j.error||null,technicalError:j.external?.technicalError||null,action:j.external?.action||null,externalId:j.external?.externalId||null,url:j.post?.url||j.external?.permalink||"",saved:j.post?.savedPreview===true,deliveryVerified:j.post?.deliveryVerified===true});
       }catch(e){rr.push({id:`${batchId}:${platform}`,platform,topic,text:drafts[platform],mediaUrl,attachments,publishedAt:new Date().toISOString(),status:"FAILED",error:e?.message||"Network error"})}
     }
     setResults(rr); await Promise.all([refreshPublishingHistory(),refreshAccountHub()]); setTab("Results");
@@ -573,7 +573,7 @@ export default function Home(){
                   const livePosts=Object.entries(accountHub).flatMap(([platform,account])=>(account.recent||[]).map(p=>({
                     id:p.id||p.externalId,platform,topic:p.topic||"",text:p.text||"",mediaUrl:p.mediaUrl||"",publishedAt:p.publishedAt||p.createdAt||"",status:p.external?.status|| (p.url?"POSTED":"UNKNOWN"),externalId:p.externalId||p.id||"",url:p.url||"",source:"provider"
                   })));
-                  const all=[...livePosts,...results,...savedResults.map(p=>({id:p.id,platform:p.channel,topic:p.topic,text:p.text,mediaUrl:p.mediaUrl,attachments:p.attachments,publishedAt:p.publishedAt,status:p.external?.status||"UNKNOWN",error:p.external?.error,externalId:p.external?.externalId,technicalError:p.external?.technicalError,action:p.external?.action,source:"history"}))];
+                  const all=[...livePosts,...results,...savedResults.map(p=>({id:p.id,platform:p.channel,topic:p.topic,text:p.text,mediaUrl:p.mediaUrl,attachments:p.attachments,publishedAt:p.publishedAt,status:p.external?.status||"UNKNOWN",error:p.external?.error,externalId:p.external?.externalId,technicalError:p.external?.technicalError,action:p.external?.action,url:p.url||p.external?.permalink||"",saved:p.savedPreview===true,deliveryVerified:p.deliveryVerified===true,source:"history"}))];
                   const seen=new Set();
                   const unique=all.filter(r=>{const key=r.url|| (r.source==="provider"&&r.externalId?`${r.platform}:${r.externalId}`:r.id)||[r.platform,r.text,r.publishedAt].join("|");if(seen.has(key))return false;seen.add(key);return true});
                   unique.sort((a,b)=>new Date(b.publishedAt||0)-new Date(a.publishedAt||0));
@@ -595,6 +595,8 @@ export default function Home(){
                         </div>
                       </div>
                       {r.externalId&&<small>Provider post ID: {r.externalId}</small>}
+                      {r.saved&&<small>Preview archived</small>}
+                      {r.status==="POSTED"&&!r.deliveryVerified&&<small>Provider accepted the post; public visibility not independently verified.</small>}
                       {r.url&&/^https:\/\//.test(r.url)&&<a className="secondaryBtn" href={r.url} target="_blank" rel="noopener noreferrer">Open post ↗</a>}
                       {r.error&&<div className="resultMessage" role="alert">{r.error}</div>}
                       {r.action==="RECONNECT_META"&&<a className="secondaryBtn resultAction" href="/connect/Meta">Reconnect Meta</a>}
