@@ -120,6 +120,7 @@ async function postLinkedIn(body, token, config) {
       status: retry.ok ? "POSTED" : "FAILED",
       httpStatus: retry.status,
       externalId: retry.headers.get("x-restli-id") || null,
+      permalink:retry.ok&&retry.headers.get("x-restli-id")?`https://www.linkedin.com/feed/update/${encodeURIComponent(retry.headers.get("x-restli-id"))}/`:null,
       fallbackUsed: true,
       authorUsed: token.author_urn,
       error: retry.ok ? null : retryText.slice(0, 800)
@@ -130,6 +131,7 @@ async function postLinkedIn(body, token, config) {
     status: r.ok ? "POSTED" : "FAILED",
     httpStatus: r.status,
     externalId: r.headers.get("x-restli-id") || null,
+    permalink:r.ok&&r.headers.get("x-restli-id")?`https://www.linkedin.com/feed/update/${encodeURIComponent(r.headers.get("x-restli-id"))}/`:null,
     authorUsed: author,
     error: r.ok ? null : text.slice(0, 800)
   };
@@ -241,7 +243,7 @@ async function postFacebook(body, token, config) {
     status:"POSTED",
     httpStatus:r.status,
     externalId:j.id||null,
-    permalink:j.id?`https://www.facebook.com/${encodeURIComponent(j.id.replace("_","/posts/"))}`:null,
+    permalink:j.id?`https://www.facebook.com/${j.id.replace("_","/posts/")}`:null,
     deliveryVerified:false,
     pageId,
     pageName:selectedPage.name||"",
