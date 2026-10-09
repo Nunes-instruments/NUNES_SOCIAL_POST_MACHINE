@@ -39,13 +39,13 @@ async function archive(body, external) {
     external,
     url: external?.permalink || null,
     deliveryVerified: external?.deliveryVerified===true,
-    savedPreview: true
+    savedPreview: false
   };
 
   try {
     const history = (await getSharedState("history:posts")) || [];
     const next = [post, ...(Array.isArray(history) ? history : [])].slice(0,250);
-    await setSharedState("history:posts", next);
+    post.savedPreview = await setSharedState("history:posts", next);
   } catch {}
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) return { ...post, url: null };
