@@ -36,7 +36,10 @@ async function archive(body, external) {
         }))
       : [],
     publishedAt: new Date().toISOString(),
-    external
+    external,
+    url: external?.permalink || null,
+    deliveryVerified: external?.deliveryVerified===true,
+    savedPreview: true
   };
 
   try {
@@ -238,6 +241,8 @@ async function postFacebook(body, token, config) {
     status:"POSTED",
     httpStatus:r.status,
     externalId:j.id||null,
+    permalink:j.id?`https://www.facebook.com/${encodeURIComponent(j.id.replace("_","/posts/"))}`:null,
+    deliveryVerified:false,
     pageId,
     pageName:selectedPage.name||"",
     error:null
