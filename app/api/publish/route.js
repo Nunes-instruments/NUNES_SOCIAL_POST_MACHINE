@@ -68,14 +68,15 @@ async function postLinkedIn(body, token, config) {
   const configuredAuthor = config?.accountId || process.env.LINKEDIN_AUTHOR_URN || null;
   const wantsOrganization = String(configuredAuthor || "").startsWith("urn:li:organization:");
 
-  const author = wantsOrganization && hasOrgPosting
-    ? configuredAuthor
-    : (token?.author_urn || configuredAuthor);
-
-  if (!author) return {
-    status: "ACCOUNT_ID_REQUIRED",
-    error: "Reconnect LinkedIn once so NUNES can detect your personal author identity."
+  if (!wantsOrganization) return {
+    status:"COMPANY_ACCOUNT_REQUIRED",
+    error:"LinkedIn company publishing requires a configured organization URN. Personal-profile fallback is disabled."
   };
+  if (!hasOrgPosting) return {
+    status:"COMPANY_PERMISSION_REQUIRED",
+    error:"LinkedIn OAuth requires w_organization_social to publish to the NUNES company Page. Reauthorize with approved organization posting access."
+  };
+  const author=configuredAuthor;
 
   const r = await fetch("https://api.linkedin.com/rest/posts", {
     method: "POST",
@@ -96,36 +97,6 @@ async function postLinkedIn(body, token, config) {
   });
 
   const text = await r.text();
-
-  if (!r.ok && wantsOrganization && !hasOrgPosting && token?.author_urn) {
-    const retry = await fetch("https://api.linkedin.com/rest/posts", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token.access_token}`,
-        "Content-Type": "application/json",
-        "X-Restli-Protocol-Version": "2.0.0",
-        "Linkedin-Version": "202606"
-      },
-      body: JSON.stringify({
-        author: token.author_urn,
-        commentary: body.text,
-        visibility: "PUBLIC",
-        distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
-        lifecycleState: "PUBLISHED",
-        isReshareDisabledByAuthor: false
-      })
-    });
-    const retryText = await retry.text();
-    return {
-      status: retry.ok ? "POSTED" : "FAILED",
-      httpStatus: retry.status,
-      externalId: retry.headers.get("x-restli-id") || null,
-      permalink:retry.ok&&retry.headers.get("x-restli-id")?`https://www.linkedin.com/feed/update/${encodeURIComponent(retry.headers.get("x-restli-id"))}/`:null,
-      fallbackUsed: true,
-      authorUsed: token.author_urn,
-      error: retry.ok ? null : retryText.slice(0, 800)
-    };
-  }
 
   return {
     status: r.ok ? "POSTED" : "FAILED",
